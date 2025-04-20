@@ -178,9 +178,7 @@ const PromotionsPage: FC = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/admin/promotions/${promotion.id}`} className="text-blue-600 hover:text-blue-900 mr-3">
-                      <i className="fas fa-eye"></i>
-                    </Link>
+                
                     <Link href={`/admin/promotions/edit/${promotion.id}`} className="text-indigo-600 hover:text-indigo-900 mr-3">
                       <i className="fas fa-edit"></i>
                     </Link>

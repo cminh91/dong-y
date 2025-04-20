@@ -17,8 +17,9 @@ const AddProductPage: FC = () => {
     usage: '',  // Removed ingredients field
     metaTitle: '',
     metaDescription: '',
+    images: [] as File[], // Added images field with type File[]
   });
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -29,13 +30,21 @@ const AddProductPage: FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      
-      // Preview the first image
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(filesArray[0]);
+      const newImagePreviews: string[] = [];
+      const newImages: File[] = [];
+
+      filesArray.forEach((file) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          newImagePreviews.push(reader.result as string);
+          if (newImagePreviews.length === filesArray.length) {
+            setImagePreviews(newImagePreviews);
+            setFormData((prev) => ({ ...prev, images: newImages }));
+          }
+        };
+        reader.readAsDataURL(file);
+        newImages.push(file);
+      });
     }
   };
 
@@ -186,13 +195,15 @@ const AddProductPage: FC = () => {
               <p className="mt-1 text-sm text-gray-500">PNG, JPG, GIF tối đa 5MB</p>
             </div>
             
-            {imagePreview && (
+            {imagePreviews.length > 0 && (
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Xem trước</h3>
                 <div className="grid grid-cols-3 gap-4">
-                  <div className="relative h-32 w-full rounded-lg overflow-hidden border">
-                    <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                  </div>
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className="relative h-32 w-full rounded-lg overflow-hidden border">
+                      <Image src={preview} alt={`Preview ${index + 1}`} fill className="object-cover" />
+                    </div>
+                  ))}
                 </div>
               </div>
             )}

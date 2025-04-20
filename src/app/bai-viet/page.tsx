@@ -81,7 +81,7 @@ const BlogPage: FC = () => {
               {categories.map((category, index) => (
                 <Link
                   key={index}
-                  href={`/blog/category/${toSlug(category)}`}
+                  href={`/bai-viet/category/${toSlug(category)}`}
                   className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${index === 0 ? 'bg-green-50 text-green-700' : ''}`}
                 >
                   {category}
@@ -109,7 +109,7 @@ const BlogPage: FC = () => {
         {/* Danh sách bài viết */}
         <div className="md:w-3/4">
           <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Blog</h1>
+            <h1 className="text-3xl font-bold">Bài viết</h1>
             <select className="form-select border rounded-lg px-4 py-2">
               <option>Mới nhất</option>
               <option>Phổ biến nhất</option>
@@ -128,7 +128,7 @@ const BlogPage: FC = () => {
                     className="object-cover"
                   />
                   <Link
-                    href={`/blog/category/${toSlug(post.category)}`}
+                    href={`/bai-viet/category/${toSlug(post.category)}`}
                     className="absolute top-4 left-4 bg-green-500 text-white px-3 py-1 rounded-full text-sm"
                   >
                     {post.category}
@@ -136,7 +136,7 @@ const BlogPage: FC = () => {
                 </div>
                 <div className="p-6">
                   <h2 className="text-xl font-bold mb-2">
-                    <Link href={`/blog/${toSlug(post.title)}-${post.id}`} className="hover:text-green-600">
+                    <Link href={`/bai-viet/${toSlug(post.title)}-${post.id}`} className="hover:text-green-600">
                       {post.title}
                     </Link>
                   </h2>

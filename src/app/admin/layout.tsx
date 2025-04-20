@@ -1,26 +1,18 @@
 import AdminSidebar from '@/components/admin/Sidebar';
-import AdminHeader from '@/components/admin/Header';
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  // Trong thực tế, cần kiểm tra xác thực người dùng ở đây
-  // Nếu không phải admin, chuyển hướng về trang chủ
-  // const isAdmin = checkAdminAuth();
-  // if (!isAdmin) return redirect('/');
-
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions);
+  if (!session || session.user?.role !== "ADMIN") {
+    redirect("/admin-login");
+  }
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-gray-100 flex">
       <AdminSidebar />
-
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <AdminHeader />
-
-        {/* Page Content */}
-        <main className="p-6">
-          {children}
-        </main>
+      <div className="flex-1">
+        {children}
       </div>
     </div>
   );

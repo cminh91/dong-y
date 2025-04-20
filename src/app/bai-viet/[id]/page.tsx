@@ -59,7 +59,7 @@ const BlogPostPage: FC<BlogPostPageProps> = ({ params }) => {
         <ol className="inline-flex items-center space-x-1 md:space-x-3">
           <li><Link href="/" className="text-gray-600 hover:text-green-600">Trang chủ</Link></li>
           <li><span className="mx-2">/</span></li>
-          <li><Link href="/blog" className="text-gray-600 hover:text-green-600">Blog</Link></li>
+          <li><Link href="/bai-viet" className="text-gray-600 hover:text-green-600">Bài viết</Link></li>
           <li><span className="mx-2">/</span></li>
           <li className="text-green-600">{post.title}</li>
         </ol>
@@ -112,8 +112,8 @@ const BlogPostPage: FC<BlogPostPageProps> = ({ params }) => {
               </div>
               <div>
                 <span className="text-gray-600">Thẻ:</span>
-                <Link href="/blog/tag/dong-y" className="ml-2 text-green-600 hover:underline">Đông y</Link>,
-                <Link href="/blog/tag/benh-gan" className="ml-1 text-green-600 hover:underline">Bệnh gan</Link>
+                <Link href="/bai-viet/tag/dong-y" className="ml-2 text-green-600 hover:underline">Đông y</Link>,
+                <Link href="/bai-viet/tag/benh-gan" className="ml-1 text-green-600 hover:underline">Bệnh gan</Link>
               </div>
             </div>
           </div>
@@ -136,7 +136,7 @@ const BlogPostPage: FC<BlogPostPageProps> = ({ params }) => {
                   </div>
                   <div>
                     <h3 className="font-medium">
-                      <Link href={`/blog/${toSlug(relatedPost.title)}-${relatedPost.id}`} className="hover:text-green-600">
+                      <Link href={`/bai-viet/${toSlug(relatedPost.title)}-${relatedPost.id}`} className="hover:text-green-600">
                         {relatedPost.title}
                       </Link>
                     </h3>

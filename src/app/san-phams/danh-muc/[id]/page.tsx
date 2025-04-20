@@ -88,7 +88,7 @@ const CategoryPage: FC<CategoryPageProps> = ({ params }) => {
         <ol className="inline-flex items-center space-x-1 md:space-x-3">
           <li><Link href="/" className="text-gray-600 hover:text-green-600">Trang chủ</Link></li>
           <li><span className="mx-2">/</span></li>
-          <li><Link href="/products" className="text-gray-600 hover:text-green-600">Sản phẩm</Link></li>
+          <li><Link href="/san-phams" className="text-gray-600 hover:text-green-600">Sản phẩm</Link></li>
           <li><span className="mx-2">/</span></li>
           <li className="text-green-600">{categoryName}</li>
         </ol>
@@ -108,7 +108,7 @@ const CategoryPage: FC<CategoryPageProps> = ({ params }) => {
                 height={250}
               />
               <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <Link href={`/product/${createProductSlug(product.name, product.id)}`} className="bg-white text-gray-800 py-2 px-4 rounded-full font-medium hover:bg-green-500 hover:text-white transition-colors duration-300">
+                <Link href={`/san-pham/${createProductSlug(product.name, product.id)}`} className="bg-white text-gray-800 py-2 px-4 rounded-full font-medium hover:bg-green-500 hover:text-white transition-colors duration-300">
                   Xem chi tiết
                 </Link>
               </div>
@@ -147,7 +147,7 @@ const CategoryPage: FC<CategoryPageProps> = ({ params }) => {
       {filteredProducts.length === 0 && (
         <div className="text-center py-12">
           <p className="text-xl text-gray-600">Không tìm thấy sản phẩm nào trong danh mục này.</p>
-          <Link href="/products" className="btn-primary inline-block mt-4">
+          <Link href="/san-phams" className="btn-primary inline-block mt-4">
             Xem tất cả sản phẩm
           </Link>
         </div>

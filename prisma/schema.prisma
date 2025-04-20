@@ -8,7 +8,6 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  extensions = [pg_trgm, uuid_ossp]
 }
 
 enum UserRole {
@@ -40,30 +39,46 @@ enum PaymentStatus {
   REFUNDED
 }
 
-model User {
-  id          Int       @id @default(autoincrement())
-  email       String    @unique
-  password    String
-  fullName    String
-  phone       String?
-  avatar      String?
-  isVerified  Boolean   @default(false)
-  role        UserRole  @default(CUSTOMER)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+enum Role {
+  ADMIN
+  USER
+  AFFILIATE
+}
 
-  orders      Order[]
-  posts       Post[]
-  reviews     ProductReview[]
-  cart        Cart?
-  wishlists   Wishlist[]
-  addresses   Address[]
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String
+  fullName      String
+  phone         String?
+  avatar        String?
+  isVerified    Boolean   @default(false)
+  role          UserRole  @default(CUSTOMER)
+  status        Status    @default(ACTIVE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  orders        Order[]
+  posts         Post[]
+  reviews       ProductReview[]
+  cart          Cart?
+  wishlists     Wishlist[]
+  addresses     Address[]
   socialAccounts SocialAccount[]
 }
 
 model Address {
-  id           Int      @id @default(autoincrement())
-  userId       Int
+  id           String   @id @default(cuid())
+  userId       String
   user         User     @relation(fields: [userId], references: [id])
   receiverName String
   phone        String
@@ -77,10 +92,10 @@ model Address {
 }
 
 model Wishlist {
-  id        Int      @id @default(autoincrement())
-  userId    Int
+  id        String   @id @default(cuid())
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
-  productId Int
+  productId String
   product   Product  @relation(fields: [productId], references: [id])
   createdAt DateTime @default(now())
 
@@ -88,14 +103,14 @@ model Wishlist {
 }
 
 model Subscription {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   email     String   @unique
   createdAt DateTime @default(now())
 }
 
 model SocialAccount {
-  id          Int      @id @default(autoincrement())
-  userId      Int
+  id          String   @id @default(cuid())
+  userId      String
   user        User     @relation(fields: [userId], references: [id])
   provider    String
   providerId  String
@@ -105,17 +120,30 @@ model SocialAccount {
 }
 
 model Category {
-  id        Int       @id @default(autoincrement())
-  name      String
-  slug      String    @unique
-  imageUrl  String?
-  products  Product[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  parentId    String?
+  parent      Category? @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryToCategory")
+  status      Status    @default(ACTIVE)
+  type        CategoryType @default(SAN_PHAM)
+  icon        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  products    Product[]
+   posts     Post[]
+}
+
+enum CategoryType {
+  SAN_PHAM
+  TIN_TUC
+  GIOI_THIEU
 }
 
 model Product {
-  id          Int       @id @default(autoincrement())
+  id          String    @id @default(cuid())
   name        String
   description String?
   price       Float
@@ -126,19 +154,21 @@ model Product {
   origin      String?
   imageUrls   String[]
   stock       Int       @default(0)
-  categoryId  Int
+  categoryId  String
   category    Category  @relation(fields: [categoryId], references: [id])
   reviews     ProductReview[]
   wishlists   Wishlist[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 }
 
 model ProductReview {
-  id        Int      @id @default(autoincrement())
-  userId    Int
+  id        String   @id @default(cuid())
+  userId    String
   user      User     @relation(fields: [userId], references: [id])
-  productId Int
+  productId String
   product   Product  @relation(fields: [productId], references: [id])
   rating    Int
   comment   String?
@@ -147,34 +177,34 @@ model ProductReview {
 }
 
 model Cart {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @unique
-  user      User     @relation(fields: [userId], references: [id])
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id])
   items     CartItem[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model CartItem {
-  id        Int     @id @default(autoincrement())
-  cartId    Int
-  cart      Cart    @relation(fields: [cartId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
-  quantity  Int     @default(1)
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
 }
 
 model Order {
-  id           Int          @id @default(autoincrement())
-  userId       Int
+  id           String       @id @default(cuid())
+  userId       String
   user         User         @relation(fields: [userId], references: [id])
   orderNumber  String       @unique
   totalAmount  Float
   status       OrderStatus  @default(PENDING)
-  shippingId   Int?
+  shippingId   String?
   shipping     Shipping?    @relation(fields: [shippingId], references: [id])
-  paymentId    Int?
-  payment      Payment?     @relation(fields: [paymentId], references: [id])
+  paymentId    String?
+  payment      Payment?
   note         String?
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
@@ -182,29 +212,29 @@ model Order {
 }
 
 model OrderItem {
-  id        Int     @id @default(autoincrement())
-  orderId   Int
-  order     Order   @relation(fields: [orderId], references: [id])
-  productId Int
-  product   Product @relation(fields: [productId], references: [id])
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
   quantity  Int
   price     Float
 }
 
 model Payment {
-  id            Int            @id @default(autoincrement())
+  id            String        @id @default(cuid())
   method        PaymentMethod
   amount        Float
-  status        PaymentStatus  @default(PENDING)
+  status        PaymentStatus @default(PENDING)
   transactionId String?
-  orderId       Int
-  order         Order          @relation(fields: [orderId], references: [id])
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Shipping {
-  id                Int       @id @default(autoincrement())
+  id                String   @id @default(cuid())
   address           String
   city              String
   district          String
@@ -214,37 +244,42 @@ model Shipping {
   fee               Float
   estimatedDelivery String?
   trackingNumber    String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  orders            Order[]
 }
 
 model Promotion {
-  id          Int       @id @default(autoincrement())
-  code        String    @unique
+  id          String   @id @default(cuid())
+  code        String   @unique
   description String?
   discount    Float
   startDate   DateTime
   endDate     DateTime
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-}
-
-model Post {
-  id          Int      @id @default(autoincrement())
-  title       String
-  slug        String   @unique
-  content     String
-  imageUrl    String?
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  isPublished Boolean  @default(false)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
+model Post {
+  id          String     @id @default(cuid())
+  title       String
+  slug        String     @unique
+  content     String     @db.Text
+  thumbnail   String?
+  authorId    String
+  author      User       @relation(fields: [authorId], references: [id])
+  status      PostStatus @default(DRAFT)
+  publishedAt DateTime?
+  tags        String[]
+  categoryId  String
+  category    Category   @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
 model Contact {
-  id        Int      @id @default(autoincrement())
+  id        String   @id @default(cuid())
   name      String
   email     String
   phone     String

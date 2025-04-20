@@ -22,7 +22,7 @@ interface ProductCardProps extends ProductProps {
 
 const ProductCard: FC<ProductCardProps> = ({ id, name, image, description, price, oldPrice, rating, reviews, badge, reverse }) => {
   return (
-    <Link href={`/san-pham/${createProductSlug(name, id)}`} className={`group flex ${reverse ? 'flex-col md:flex-row-reverse md:text-right md:justify-end' : 'flex-col md:flex-row'} items-center md:items-center gap-4 rounded-lg overflow-hidden shadow hover:shadow-lg hover:scale-[1.02] transition-all duration-300 p-4`}>
+    <Link href={`/san-phams/${createProductSlug(name, id)}`} className={`group flex ${reverse ? 'flex-col md:flex-row-reverse md:text-right md:justify-end' : 'flex-col md:flex-row'} items-center md:items-center gap-4 rounded-lg overflow-hidden shadow hover:shadow-lg hover:scale-[1.02] transition-all duration-300 p-4`}>
       <div className="relative overflow-hidden flex-shrink-0 w-full md:w-80">
         <Image
           src={image}
@@ -115,7 +115,7 @@ const FeaturedProducts: FC = () => {
         </div>
         
         <div className="text-center mt-12">
-          <Link href="/products" className="btn-primary inline-flex items-center">
+          <Link href="/san-phams" className="btn-primary inline-flex items-center">
             Xem tất cả sản phẩm
             <i className="fas fa-arrow-right ml-2"></i>
           </Link>

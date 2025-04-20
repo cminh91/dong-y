@@ -50,9 +50,10 @@ const Header: FC<HeaderProps> = (props) => {
                     Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
                   </span>
                   <Link href="/tai-khoan" className="flex items-center space-x-2 hover:text-green-600">
-                    <Image src="/images/avatar.jpg" alt={userName} width={24} height={24} className="rounded-full" />
-                    <span>{userName}</span>
-                  </Link>
+  <i className="fas fa-user-circle text-2xl text-green-600"></i>
+  <span>{userName}</span>
+</Link>
+
                 </>
               ) : (
                 <>

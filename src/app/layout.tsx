@@ -1,7 +1,6 @@
 import { Roboto, Poppins } from "next/font/google";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
 const roboto = Roboto({
   variable: "--font-roboto",
   subsets: ["latin", "vietnamese"],
@@ -31,9 +30,9 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
       </head>
       <body className={`${roboto.variable} ${poppins.variable} antialiased`}>
-        <Header />
-        {children}
-        <Footer />
+        <ClientLayoutWrapper>
+          {children}
+        </ClientLayoutWrapper>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/images/trongdong.png"

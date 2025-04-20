@@ -1,32 +1,33 @@
 import { FC } from 'react';
 import Link from 'next/link';
 
-const AdminDashboard: FC = () => {
-  // Dữ liệu thống kê (trong thực tế sẽ được lấy từ API)
-  const stats = [
-    { title: 'Tổng đơn hàng', value: '124', change: '+12%', icon: 'fas fa-shopping-cart', color: 'bg-blue-500' },
-    { title: 'Doanh thu', value: '32.5M₫', change: '+8%', icon: 'fas fa-money-bill-wave', color: 'bg-green-500' },
-    { title: 'Sản phẩm', value: '45', change: '+3', icon: 'fas fa-box', color: 'bg-purple-500' },
-    { title: 'Khách hàng', value: '289', change: '+18', icon: 'fas fa-users', color: 'bg-orange-500' },
-  ];
+interface Stat {
+  title: string;
+  value: string | number;
+  change: string;
+  icon: string;
+  color: string;
+}
+interface Order {
+  id: string;
+  customer: string;
+  date: string;
+  total: string;
+  status: string;
+}
+interface Product {
+  name: string;
+  sales: number;
+  revenue: string;
+}
 
-  // Đơn hàng gần đây (trong thực tế sẽ được lấy từ API)
-  const recentOrders = [
-    { id: 'ORD-001', customer: 'Nguyễn Văn A', date: '15/05/2024', total: '850.000₫', status: 'Đã giao' },
-    { id: 'ORD-002', customer: 'Trần Thị B', date: '14/05/2024', total: '1.250.000₫', status: 'Đang giao' },
-    { id: 'ORD-003', customer: 'Lê Văn C', date: '13/05/2024', total: '450.000₫', status: 'Đã giao' },
-    { id: 'ORD-004', customer: 'Phạm Thị D', date: '12/05/2024', total: '720.000₫', status: 'Đã hủy' },
-    { id: 'ORD-005', customer: 'Hoàng Văn E', date: '11/05/2024', total: '950.000₫', status: 'Đang xử lý' },
-  ];
+interface AdminDashboardProps {
+  stats: Stat[];
+  recentOrders: Order[];
+  topProducts: Product[];
+}
 
-  // Sản phẩm bán chạy (trong thực tế sẽ được lấy từ API)
-  const topProducts = [
-    { name: 'Hoàng Liên Giải Độc Hoàn', sales: 48, revenue: '15.360.000₫' },
-    { name: 'Thập Toàn Đại Bổ Hoàn', sales: 32, revenue: '14.400.000₫' },
-    { name: 'An Cung Ngưu Hoàng Hoàn', sales: 24, revenue: '13.920.000₫' },
-    { name: 'Hà Thủ Ô Đỏ', sales: 18, revenue: '5.040.000₫' },
-  ];
-
+const AdminDashboard: FC<AdminDashboardProps> = ({ stats, recentOrders, topProducts }) => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">

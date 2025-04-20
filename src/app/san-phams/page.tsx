@@ -168,7 +168,7 @@ const ProductsPage: FC = () => {
                     height={250}
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <Link href={`/product/${createProductSlug(product.name, product.id)}`} className="bg-white text-gray-800 py-2 px-4 rounded-full font-medium hover:bg-green-500 hover:text-white transition-colors duration-300">
+                    <Link href={`/san-phams/${createProductSlug(product.name, product.id)}`} className="bg-white text-gray-800 py-2 px-4 rounded-full font-medium hover:bg-green-500 hover:text-white transition-colors duration-300">
                       Xem chi tiết
                     </Link>
                   </div>

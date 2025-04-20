@@ -1,0 +1,33 @@
+Kế hoạch triển khai backend & tích hợp frontend:
+
+Phân tích nghiệp vụ & xác định các module backend:
+
+Quản lý người dùng (users, roles, authentication)
+Quản lý sản phẩm (products, categories, promotions)
+Quản lý đơn hàng (orders, order status)
+Quản lý bài viết/tin tức (posts)
+Quản lý cài đặt, chính sách, FAQ, liên hệ
+Lịch sử giảm giá, yêu thích, địa chỉ giao hàng
+Thiết kế database:
+
+Sử dụng Prisma để định nghĩa schema (file prisma/schema.prisma)
+Các bảng chính: User, Product, Category, Order, Post, Promotion, Address, Favorite, DiscountHistory, v.v.
+Chạy migrate để tạo database
+Xây dựng API backend:
+
+Tạo các route API trong src/pages/api hoặc src/app/api (Next.js API routes)
+CRUD cho từng module: users, products, categories, orders, posts, v.v.
+Xác thực JWT hoặc NextAuth cho các route cần bảo mật
+Xử lý upload ảnh (nếu có), validate dữ liệu
+Tích hợp backend vào frontend:
+
+Sử dụng fetch/axios hoặc React Query/SWR để gọi API từ các component frontend
+Hiển thị dữ liệu động: danh sách sản phẩm, chi tiết sản phẩm, giỏ hàng, đơn hàng, v.v.
+Form thêm/sửa/xóa (admin) kết nối API
+Xử lý đăng nhập, đăng ký, phân quyền
+Kiểm thử & hoàn thiện:
+
+Viết test cho API (có thể dùng Jest, Supertest)
+Kiểm thử UI/UX, xử lý lỗi, thông báo
+Tối ưu hiệu năng, bảo mật
+Nếu bạn cần chi tiết từng bước (ví dụ: thiết kế schema, tạo API cụ thể, hướng dẫn tích hợp từng module), hãy chỉ định module hoặc chức năng bạn muốn triển khai trước!
