@@ -146,15 +146,14 @@ model Product {
   id          String    @id @default(cuid())
   name        String
   description String?
+  shortDescription String?
   price       Float
   salePrice   Float?
   unit        String    @default("gói")
-  dosage      String?
-  ingredients String?
-  origin      String?
   imageUrls   String[]
   stock       Int       @default(0)
   categoryId  String
+  metaKeywords     String?
   category    Category  @relation(fields: [categoryId], references: [id])
   reviews     ProductReview[]
   wishlists   Wishlist[]

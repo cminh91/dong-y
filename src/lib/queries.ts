@@ -53,3 +53,58 @@ export async function deleteCategory(id: string) {
     where: { id },
   });
 }
+
+// CREATE - create product
+export async function createProduct(data: Prisma.ProductCreateInput) {
+  // TODO: Implement image upload logic if needed server-side
+  // For now, assume data.imageUrls is already a string array of URLs
+  return await prisma.product.create({
+    data,
+  });
+}
+
+// READ - get all products (basic)
+export async function getAllProducts() {
+  return await prisma.product.findMany({
+    include: {
+      category: {
+        select: {
+          name: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+}
+
+// READ - get product by id
+export async function getProductById(id: string): Promise<Prisma.ProductGetPayload<{ include: { category: { select: { id: true, name: true } } } }> | null> {
+  return await prisma.product.findUnique({
+    where: { id },
+    include: { // Sử dụng lại include
+      category: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+}
+
+// UPDATE - update product
+export async function updateProduct(id: string, data: Prisma.ProductUpdateInput) {
+  return await prisma.product.update({
+    where: { id },
+    data,
+  });
+}
+
+// DELETE - delete product
+export async function deleteProduct(id: string) {
+  return await prisma.product.delete({
+    where: { id },
+  });
+}

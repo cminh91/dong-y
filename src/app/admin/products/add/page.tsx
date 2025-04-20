@@ -1,26 +1,54 @@
 'use client';
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
+import { getAllCategories, createProduct } from '@/lib/queries'; // Import Server Actions
+import TinyMCEEditor from '@/components/admin/TinyMCEEditor'; // Import TinyMCE Editor tùy chỉnh
+
+type Category = {
+  id: string;
+  name: string;
+};
+
 const AddProductPage: FC = () => {
   const router = useRouter();
   const [formData, setFormData] = useState({
     name: '',
-    category: '',
+    categoryId: '', // Changed from category to categoryId
     price: '',
-    originalPrice: '',
+    salePrice: '', // Changed from originalPrice to salePrice
     stock: '',
-    status: 'Đang bán',
-    description: '',
-    shortDescription: '',
-    usage: '',  // Removed ingredients field
-    metaTitle: '',
-    metaDescription: '',
-    images: [] as File[], // Added images field with type File[]
+    shortDescription: '', // Thêm mô tả ngắn
+    description: '', // Mô tả chi tiết
+    imageUrls: [] as string[], // Changed from images: File[] to imageUrls: string[]
+    metaKeywords: '', // Thêm meta keyword
+    metaTitle: '', // Giữ lại meta title nếu cần
+    metaDescription: '', // Giữ lại meta description nếu cần
   });
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        const fetchedCategories = await getAllCategories();
+        setCategories(fetchedCategories);
+      } catch (error) {
+        console.error('Lỗi khi tải danh mục:', error);
+        toast.error('Lỗi khi tải danh sách danh mục');
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -30,35 +58,66 @@ const AddProductPage: FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
-      const newImagePreviews: string[] = [];
-      const newImages: File[] = [];
+      // const newImagePreviews: string[] = [];
+      // TODO: Implement actual image upload and get URLs
+      const uploadedImageUrls: string[] = filesArray.map(file => URL.createObjectURL(file)); // Using temporary URLs for preview
 
-      filesArray.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newImagePreviews.push(reader.result as string);
-          if (newImagePreviews.length === filesArray.length) {
-            setImagePreviews(newImagePreviews);
-            setFormData((prev) => ({ ...prev, images: newImages }));
-          }
-        };
-        reader.readAsDataURL(file);
-        newImages.push(file);
-      });
+      setImagePreviews(uploadedImageUrls);
+      // For now, just store temporary URLs or handle upload separately
+      // setFormData((prev) => ({ ...prev, imageUrls: uploadedImageUrls }));
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
+
+    try {
+      // TODO: Handle image upload before creating product and get actual URLs
+      const productData = {
+        name: formData.name,
+        category: { // Thay categoryId bằng category
+          connect: { // Sử dụng cú pháp connect của Prisma
+            id: formData.categoryId,
+          },
+        },
+        price: parseFloat(formData.price),
+        salePrice: formData.salePrice ? parseFloat(formData.salePrice) : undefined,
+        stock: parseInt(formData.stock, 10),
+        shortDescription: formData.shortDescription || undefined, // Thêm mô tả ngắn
+        description: formData.description || undefined, // Thêm mô tả chi tiết
+        imageUrls: formData.imageUrls, // Use actual uploaded URLs here
+        metaKeywords: formData.metaKeywords || undefined, // Thêm meta keyword
+        metaTitle: formData.metaTitle || undefined, // Giữ lại meta title nếu cần
+        metaDescription: formData.metaDescription || undefined, // Giữ lại meta description nếu cần
+        // status is not directly in Product model, derived from stock or other logic
+      };
+
+      const result = await createProduct(productData);
+
+      if (result) {
+        toast.success('Thêm sản phẩm thành công');
+        router.push('/admin/products');
+      } else {
+        toast.error('Thêm sản phẩm thất bại');
+      }
+
+    } catch (error) {
+      console.error('Lỗi khi thêm sản phẩm:', error);
+      toast.error('Lỗi khi thêm sản phẩm');
+    } finally {
       setSubmitting(false);
-      alert('Sản phẩm đã được thêm thành công!');
-      router.push('/admin/products');
-    }, 1000);
+    }
   };
+
+  if (isLoadingCategories) {
+     return (
+      <div className="container mx-auto px-4 py-6 flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -90,17 +149,16 @@ const AddProductPage: FC = () => {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục <span className="text-red-500">*</span></label>
                 <select
-                  name="category"
-                  value={formData.category}
+                  name="categoryId" // Changed name
+                  value={formData.categoryId}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   required
                 >
                   <option value="">Chọn danh mục</option>
-                  <option value="Thuốc bổ">Thuốc bổ</option>
-                  <option value="Thuốc bổ gan">Thuốc bổ gan</option>
-                  <option value="Dược liệu">Dược liệu</option>
-                  <option value="Gia vị Đông y">Gia vị Đông y</option>
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
                 </select>
               </div>
               <div>
@@ -118,8 +176,8 @@ const AddProductPage: FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Giá gốc (₫)</label>
                 <input
                   type="number"
-                  name="originalPrice"
-                  value={formData.originalPrice}
+                  name="salePrice" // Changed name
+                  value={formData.salePrice}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 />
@@ -135,40 +193,64 @@ const AddProductPage: FC = () => {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái <span className="text-red-500">*</span></label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  <option value="Đang bán">Đang bán</option>
-                  <option value="Hết hàng">Hết hàng</option>
-                  <option value="Ngừng bán">Ngừng bán</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label>
-                <input
-                  type="text"
+               <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label> {/* Thêm mô tả ngắn */}
+                <textarea
                   name="shortDescription"
                   value={formData.shortDescription}
+                  onChange={handleChange}
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                ></textarea>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả chi tiết</label> {/* Giữ lại mô tả chi tiết */}
+                 <TinyMCEEditor
+                  value={formData.description}
+                  onEditorChange={(content: string) => setFormData(prev => ({ ...prev, description: content }))}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="p-6 border-b">
+            <h2 className="text-lg font-semibold">Thông tin SEO</h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Keywords</label> {/* Thêm meta keyword */}
+                <input
+                  type="text"
+                  name="metaKeywords"
+                  value={formData.metaKeywords}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả chi tiết</label>
-                <textarea
-                  name="description"
-                  value={formData.description}
+              {/* Giữ lại Meta Title và Meta Description nếu cần */}
+              {/* <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Title</label>
+                <input
+                  type="text"
+                  name="metaTitle"
+                  value={formData.metaTitle}
                   onChange={handleChange}
-                  rows={5}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
+                <textarea
+                  name="metaDescription"
+                  value={formData.metaDescription}
+                  onChange={handleChange}
+                  rows={3}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 ></textarea>
-              </div>
+              </div> */}
             </div>
           </div>
         </div>
@@ -194,7 +276,7 @@ const AddProductPage: FC = () => {
               />
               <p className="mt-1 text-sm text-gray-500">PNG, JPG, GIF tối đa 5MB</p>
             </div>
-            
+
             {imagePreviews.length > 0 && (
               <div className="mt-4">
                 <h3 className="text-sm font-medium text-gray-700 mb-2">Xem trước</h3>
@@ -209,40 +291,10 @@ const AddProductPage: FC = () => {
             )}
           </div>
         </div>
-    
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-6 border-b">
-            <h2 className="text-lg font-semibold">Thông tin SEO</h2>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Title</label>
-                <input
-                  type="text"
-                  name="metaTitle"
-                  value={formData.metaTitle}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
-                <textarea
-                  name="metaDescription"
-                  value={formData.metaDescription}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                ></textarea>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="flex justify-end space-x-3">
-          <Link 
-            href="/admin/products" 
+          <Link
+            href="/admin/products"
             className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
           >
             Hủy

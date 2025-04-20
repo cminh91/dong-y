@@ -1,48 +1,63 @@
 'use client';
-import { FC } from 'react';
+import { FC, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import toast from 'react-hot-toast';
+import { getAllProducts, deleteProduct } from '@/lib/queries';
+
+type Product = {
+  id: string;
+  name: string;
+  imageUrls: string[];
+  category: { name: string };
+  price: number;
+  stock: number;
+  // Assuming status is derived or added later, using stock for now
+  // status: string;
+};
 
 const ProductsPage: FC = () => {
-  // Mock data for products list
-  const products = [
-    {
-      id: '1',
-      name: 'Hoàng Liên Giải Độc Hoàn',
-      image: '/images/hepasaky.png',
-      category: 'Thuốc bổ gan',
-      price: 320000,
-      stock: 50,
-      status: 'Đang bán',
-    },
-    {
-      id: '2',
-      name: 'Thập Toàn Đại Bổ Hoàn',
-      image: '/images/lypasaky.png',
-      category: 'Thuốc bổ',
-      price: 450000,
-      stock: 35,
-      status: 'Đang bán',
-    },
-    {
-      id: '3',
-      name: 'An Cung Ngưu Hoàng Hoàn',
-      image: '/images/trongdong.png',
-      category: 'Thuốc bổ',
-      price: 580000,
-      stock: 20,
-      status: 'Đang bán',
-    },
-    {
-      id: '4',
-      name: 'Hà Thủ Ô Đỏ',
-      image: '/images/hepasaky.png',
-      category: 'Dược liệu',
-      price: 280000,
-      stock: 0,
-      status: 'Hết hàng',
-    },
-  ];
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getAllProducts();
+        setProducts(data);
+      } catch (error) {
+        toast.error('Lỗi khi tải danh sách sản phẩm');
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return;
+    try {
+      await deleteProduct(id);
+
+      setProducts(products.filter(p => p.id !== id));
+      toast.success('Xóa sản phẩm thành công');
+    } catch (error) {
+      toast.error('Lỗi khi xóa sản phẩm');
+      console.error(error);
+    }
+  };
+
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-6 flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -72,6 +87,7 @@ const ProductsPage: FC = () => {
             <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
             <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
               <option value="">Tất cả danh mục</option>
+              {/* TODO: Fetch actual categories */}
               <option value="thuoc-bo">Thuốc bổ</option>
               <option value="thuoc-bo-gan">Thuốc bổ gan</option>
               <option value="duoc-lieu">Dược liệu</option>
@@ -116,12 +132,14 @@ const ProductsPage: FC = () => {
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-10 w-10 relative">
-                        <Image
-                          src={product.image}
-                          alt={product.name}
-                          fill
-                          className="object-cover rounded-md"
-                        />
+                         {product.imageUrls && product.imageUrls.length > 0 && (
+                          <Image
+                            src={product.imageUrls[0]}
+                            alt={product.name}
+                            fill
+                            className="object-cover rounded-md"
+                          />
+                         )}
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">{product.name}</div>
@@ -129,16 +147,16 @@ const ProductsPage: FC = () => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.category}</td>
+                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.category.name}</td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.price.toLocaleString()}₫</td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.stock}</td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                     <span
                       className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.status === 'Đang bán' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {product.status}
+                      {product.stock > 0 ? 'Đang bán' : 'Hết hàng'}
                     </span>
                   </td>
                   <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -148,7 +166,7 @@ const ProductsPage: FC = () => {
                     <Link href={`/admin/products/edit/${product.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
                       <i className="fas fa-edit"></i>
                     </Link>
-                    <button className="text-red-600 hover:text-red-900">
+                    <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900">
                       <i className="fas fa-trash"></i>
                     </button>
                   </td>
@@ -164,12 +182,14 @@ const ProductsPage: FC = () => {
             <div key={product.id} className="p-4">
               <div className="flex items-center mb-2">
                 <div className="flex-shrink-0 h-12 w-12 relative">
-                  <Image
-                    src={product.image}
-                    alt={product.name}
-                    fill
-                    className="object-cover rounded-md"
-                  />
+                   {product.imageUrls && product.imageUrls.length > 0 && (
+                    <Image
+                      src={product.imageUrls[0]}
+                      alt={product.name}
+                      fill
+                      className="object-cover rounded-md"
+                    />
+                   )}
                 </div>
                 <div className="ml-4">
                   <div className="text-sm font-medium text-gray-900">{product.name}</div>
@@ -178,7 +198,7 @@ const ProductsPage: FC = () => {
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
-                  <span className="text-gray-500">Danh mục:</span> {product.category}
+                  <span className="text-gray-500">Danh mục:</span> {product.category.name}
                 </div>
                 <div>
                   <span className="text-gray-500">Giá:</span> {product.price.toLocaleString()}₫
@@ -190,10 +210,10 @@ const ProductsPage: FC = () => {
                   <span className="text-gray-500">Trạng thái:</span>
                   <span
                     className={`ml-1 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      product.status === 'Đang bán' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      product.stock > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {product.status}
+                    {product.stock > 0 ? 'Đang bán' : 'Hết hàng'}
                   </span>
                 </div>
               </div>
@@ -204,7 +224,7 @@ const ProductsPage: FC = () => {
                 <Link href={`/admin/products/edit/${product.id}`} className="text-blue-600 hover:text-blue-900">
                   <i className="fas fa-edit"></i>
                 </Link>
-                <button className="text-red-600 hover:text-red-900">
+                <button onClick={() => handleDelete(product.id)} className="text-red-600 hover:text-red-900">
                   <i className="fas fa-trash"></i>
                 </button>
               </div>
@@ -216,8 +236,8 @@ const ProductsPage: FC = () => {
         <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
           <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <div className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">4</span> của{' '}
-              <span className="font-medium">4</span> sản phẩm
+              Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">{products.length}</span> của{' '}
+              <span className="font-medium">{products.length}</span> sản phẩm
             </div>
             <div>
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">

@@ -24,52 +24,12 @@ export default function CategoriesPage() {
     const fetchCategories = async () => {
       try {
         setIsLoading(true);
-        // TODO: Thay bằng API call thực tế
-        const mockCategories: Category[] = [
-          {
-            id: '1',
-            name: 'Thuốc bổ',
-            slug: 'thuoc-bo',
-            description: 'Các loại thuốc bổ dưỡng cơ thể',
-            type: 'Sản phẩm',
-            status: 'ACTIVE',
-            parentId: null,
-            level: 1,
-          },
-          {
-            id: '2',
-            name: 'Vitamin tổng hợp',
-            slug: 'vitamin-tong-hop',
-            description: 'Vitamin tổng hợp cho mọi lứa tuổi',
-            type: 'Sản phẩm',
-            status: 'ACTIVE',
-            parentId: '1',
-            parentName: 'Thuốc bổ',
-            level: 2,
-          },
-          {
-            id: '3',
-            name: 'Vitamin C',
-            slug: 'vitamin-c',
-            description: 'Vitamin C tăng sức đề kháng',
-            type: 'Sản phẩm',
-            status: 'ACTIVE',
-            parentId: '2',
-            parentName: 'Vitamin tổng hợp',
-            level: 3,
-          },
-          {
-            id: '4',
-            name: 'Tin tức sức khỏe',
-            slug: 'tin-tuc-suc-khoe',
-            description: 'Các bài viết về sức khỏe',
-            type: 'Tin tức',
-            status: 'ACTIVE',
-            parentId: null,
-            level: 1,
-          },
-        ];
-        setCategories(mockCategories);
+        const res = await fetch('/api/admin/categories');
+        if (!res.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data: Category[] = await res.json();
+        setCategories(data);
       } catch (error) {
         toast.error('Lỗi khi tải danh sách danh mục');
         console.error(error);
@@ -83,7 +43,20 @@ export default function CategoriesPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
     try {
-      // TODO: Thay bằng API call xóa thực tế
+      const res = await fetch(`/api/admin/categories`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Lỗi khi xóa danh mục');
+      }
+
       setCategories(categories.filter(c => c.id !== id));
       toast.success('Xóa danh mục thành công');
     } catch (error) {

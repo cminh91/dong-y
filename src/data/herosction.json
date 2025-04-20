@@ -1,13 +1,13 @@
 [
   {
     "id": "1",
-    "name": "Hepasaky",
+    "name": "HepaSaky",
     "image": "/images/hepasaky.png",
     "description": "HỖ TRỢ GIẢI ĐỘC GAN"
   },
   {
     "id": "2",
-    "name": "Lypasaky",
+    "name": "LipaSaky",
     "image": "/images/lypasaky.png",
     "description": "HỖ TRỢ GIẢM MỠ MÁU VÀ TĂNG SỨC BỀN THÀNH MẠCH"
   }

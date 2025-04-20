@@ -1,31 +1,18 @@
-import CategoryForm, { CategoryData } from '@/components/admin/CategoryForm';
-import { getCategoryById, getParentCategories, updateCategory } from '@/lib/queries';
+// SSR: Lấy dữ liệu danh mục, truyền cho client component
+import { notFound } from "next/navigation";
 
-const EditCategoryPage = async ({ params }: { params: { id: string } }) => {
-  const category = await getCategoryById(params.id);
-  const parentCategories = await getParentCategories(params.id);
+// type Category = {
+//   id: string;
+//   name: string;
+//   imageUrl: string;
+//   slug: string;
+//   description: string;
+//   productCount: number;
+//   isActive: boolean;
+//   sortOrder: number;
+// };
 
-  const handleUpdate = async (data: CategoryData) => {
-    await updateCategory(params.id, data);
-    return { success: true };
-  };
-
-  return (
-    <CategoryForm
-  initialValues={
-    category
-      ? {
-          ...category,
-          description: category.description ?? undefined,
-          parentId: category.parentId ?? undefined,
-          // icon: category.icon ?? undefined,
-        }
-      : undefined
-  }
-  parentCategories={parentCategories}
-  onSubmit={handleUpdate}
-/>
-  );
-};
-
-export default EditCategoryPage;
+// Đã xóa code API, trả về notFound luôn
+export default function EditCategoryPage() {
+  return notFound();
+}

@@ -28,8 +28,9 @@ export async function GET() {
     orderBy: { _sum: { quantity: 'desc' } },
     take: 4,
   });
+// Đổi productId từ number sang string để khớp với dữ liệu trả về từ Prisma
 interface TopProductRaw {
-    productId: number;
+    productId: string;
     _sum: {
         quantity: number | null;
         price: number | null;

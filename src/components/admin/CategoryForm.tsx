@@ -66,7 +66,7 @@ const CategoryForm: FC<CategoryFormProps> = ({ onSubmit, initialValues, parentCa
       await onSubmit(data);
       // Optionally, redirect or show success message
       // e.g., router.push('/admin/categories');
-    } catch (error) {
+    } catch {
       setSubmitError('Có lỗi xảy ra khi lưu danh mục. Vui lòng thử lại.');
     } finally {
       setIsSubmitting(false);
