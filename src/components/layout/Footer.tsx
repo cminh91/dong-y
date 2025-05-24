@@ -128,14 +128,7 @@ const Footer: FC<Partial<FooterData>> = (props) => {
         <i className="fas fa-arrow-up"></i>
       </div>
       <div className="absolute inset-0 w-full h-full bg-white/17 z-10"></div>
-      <video
-        src="/images/videofooter.mp4"
-        autoPlay
-        muted
-        loop
-        playsInline
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0"
-      />
+      {/* Đã xóa video footer */}
     </footer>
   );
 };

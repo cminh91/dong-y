@@ -1,7 +1,7 @@
 'use client';
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import TinyMCEEditor from '@/components/admin/TinyMCEEditor'; // Import TinyMCE Editor tùy chỉnh
@@ -11,8 +11,20 @@ type Category = {
   name: string;
 };
 
-const AddProductPage: FC = () => {
+const EditProductPage: FC = () => {
   const router = useRouter();
+  const params = useParams();
+  const productId = params.id as string;
+
+  // Dữ liệu mẫu thay thế cho dữ liệu từ Prisma
+  const categories: Category[] = [
+    { id: '1', name: 'Thuốc bổ' },
+    { id: '2', name: 'Thuốc bổ gan' },
+    { id: '3', name: 'Dược liệu' },
+    { id: '4', name: 'Gia vị Đông y' },
+    { id: '5', name: 'Trà thảo dược' }
+  ];
+
   const [formData, setFormData] = useState({
     name: '',
     categoryId: '',
@@ -29,14 +41,27 @@ const AddProductPage: FC = () => {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Dữ liệu mẫu thay thế cho dữ liệu từ Prisma
-  const categories: Category[] = [
-    { id: '1', name: 'Thuốc bổ' },
-    { id: '2', name: 'Thuốc bổ gan' },
-    { id: '3', name: 'Dược liệu' },
-    { id: '4', name: 'Gia vị Đông y' },
-    { id: '5', name: 'Trà thảo dược' }
-  ];
+  // Giả lập tải dữ liệu sản phẩm
+  useEffect(() => {
+    // Giả lập dữ liệu sản phẩm dựa trên ID
+    const mockProduct = {
+      id: productId,
+      name: 'HEPASAKY GOLD',
+      categoryId: '2',
+      price: '320000',
+      salePrice: '',
+      stock: '25',
+      shortDescription: 'Giải độc gan, hỗ trợ điều trị viêm gan, vàng da',
+      description: '<p>Sản phẩm được bào chế từ các thảo dược quý giúp thanh lọc cơ thể, tăng cường chức năng gan, hỗ trợ điều trị các bệnh về gan hiệu quả.</p>',
+      imageUrls: ['/images/hepasaky.png'],
+      metaKeywords: 'thuốc bổ gan, giải độc gan, viêm gan',
+      metaTitle: '',
+      metaDescription: '',
+    };
+
+    setFormData(mockProduct);
+    setImagePreviews(mockProduct.imageUrls);
+  }, [productId]);
 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -62,14 +87,14 @@ const AddProductPage: FC = () => {
     setSubmitting(true);
 
     try {
-      // Giả lập thêm sản phẩm thành công
+      // Giả lập cập nhật sản phẩm thành công
       setTimeout(() => {
-        toast.success('Thêm sản phẩm thành công');
+        toast.success('Cập nhật sản phẩm thành công');
         router.push('/admin/products');
       }, 1000);
     } catch (error) {
-      console.error('Lỗi khi thêm sản phẩm:', error);
-      toast.error('Lỗi khi thêm sản phẩm');
+      console.error('Lỗi khi cập nhật sản phẩm:', error);
+      toast.error('Lỗi khi cập nhật sản phẩm');
     } finally {
       setSubmitting(false);
     }
@@ -82,7 +107,7 @@ const AddProductPage: FC = () => {
         <Link href="/admin/products" className="text-blue-600 hover:text-blue-800 mr-2">
           <i className="fas fa-arrow-left"></i> Quay lại
         </Link>
-        <h1 className="text-2xl font-bold">Thêm sản phẩm mới</h1>
+        <h1 className="text-2xl font-bold">Chỉnh sửa sản phẩm</h1>
       </div>
 
       <form onSubmit={handleSubmit}>
@@ -270,7 +295,7 @@ const AddProductPage: FC = () => {
                 Đang xử lý...
               </>
             ) : (
-              'Thêm sản phẩm'
+              'Cập nhật sản phẩm'
             )}
           </button>
         </div>
@@ -279,4 +304,4 @@ const AddProductPage: FC = () => {
   );
 };
 
-export default AddProductPage;
+export default EditProductPage;

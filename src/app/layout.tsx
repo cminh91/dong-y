@@ -33,20 +33,6 @@ export default function RootLayout({
         <ClientLayoutWrapper>
           {children}
         </ClientLayoutWrapper>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/trongdong.png"
-          alt="Trống đồng"
-          loading="eager"
-          className="fixed top-1/2 right-0 translate-y-[-50%] translate-x-1/2 w-[30rem] md:w-[50rem] opacity-90 pointer-events-none z-[-10] slow-spin"
-        />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/images/vn.png"
-          alt="Decorative"
-          loading="eager"
-          className="fixed top-1/5 left-45 translate-y-[-25%] -translate-x-1/2 w-[25rem] sm:w-[20rem] md:w-[30rem] opacity-20 pointer-events-none z-0 md:left-55"
-        />
       </body>
     </html>
   );

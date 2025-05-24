@@ -1,100 +1,86 @@
 "use client";
 
-import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
-
-type Category = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  type: string; // Loại danh mục: Sản phẩm, Tin tức, Giới thiệu, ...
-  status: 'ACTIVE' | 'INACTIVE';
-  parentId?: string | null;
-  level: 1 | 2 | 3;
-  parentName?: string;
-};
+import { useState } from 'react';
 
 export default function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setIsLoading(true);
-        const res = await fetch('/api/admin/categories');
-        if (!res.ok) {
-          throw new Error('Failed to fetch categories');
-        }
-        const data: Category[] = await res.json();
-        setCategories(data);
-      } catch (error) {
-        toast.error('Lỗi khi tải danh sách danh mục');
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchCategories();
-  }, []);
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa danh mục này?')) return;
-    try {
-      const res = await fetch(`/api/admin/categories`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || 'Lỗi khi xóa danh mục');
-      }
-
-      setCategories(categories.filter(c => c.id !== id));
-      toast.success('Xóa danh mục thành công');
-    } catch (error) {
-      toast.error('Lỗi khi xóa danh mục');
-      console.error(error);
+  // Dữ liệu mẫu cho danh mục
+  const [categories] = useState([
+    {
+      id: 1,
+      name: 'Đông Y',
+      description: 'Các sản phẩm thuốc đông y',
+      slug: 'dong-y',
+      type: 'Sản phẩm',
+      status: 'Hiển thị',
+      level: 1,
+      parent: 'Không có'
+    },
+    {
+      id: 2,
+      name: 'Thảo dược',
+      description: 'Các sản phẩm thảo dược tự nhiên',
+      slug: 'thao-duoc',
+      type: 'Sản phẩm',
+      status: 'Hiển thị',
+      level: 1,
+      parent: 'Không có'
+    },
+    {
+      id: 3,
+      name: 'Thuốc bổ gan',
+      description: 'Các sản phẩm thuốc bổ gan',
+      slug: 'thuoc-bo-gan',
+      type: 'Sản phẩm',
+      status: 'Hiển thị',
+      level: 2,
+      parent: 'Đông Y'
+    },
+    {
+      id: 4,
+      name: 'Tin tức sức khỏe',
+      description: 'Bài viết về sức khỏe',
+      slug: 'tin-tuc-suc-khoe',
+      type: 'Tin tức',
+      status: 'Hiển thị',
+      level: 1,
+      parent: 'Không có'
+    },
+    {
+      id: 5,
+      name: 'Giới thiệu',
+      description: 'Thông tin giới thiệu về công ty',
+      slug: 'gioi-thieu',
+      type: 'Giới thiệu',
+      status: 'Hiển thị',
+      level: 1,
+      parent: 'Không có'
     }
-  };
+  ]);
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-6 flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="container mx-auto px-2 py-3 sm:px-4 sm:py-5 md:px-6 md:py-6">
       {/* Tiêu đề và nút thêm */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <h1 className="text-xl sm:text-2xl font-bold">Quản lý danh mục</h1>
-        <Link 
-          href="/admin/categories/add" 
+        <Link
+          href="/admin/categories/add"
           className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition"
         >
           <i className="fas fa-plus"></i>
           <span>Thêm danh mục</span>
         </Link>
       </div>
-  
+
       {/* Bộ lọc */}
       <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
-            <input 
-              type="text" 
-              placeholder="Tên danh mục..." 
+            <input
+              type="text"
+              placeholder="Tên danh mục..."
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
             />
           </div>
@@ -117,7 +103,7 @@ export default function CategoriesPage() {
           </div>
         </div>
       </div>
-  
+
       {/* Bảng danh mục */}
       <div className="bg-white rounded-lg shadow overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -135,25 +121,29 @@ export default function CategoriesPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {categories.map((category, idx) => (
-              <tr key={category.id}>
-                <td className="px-3 py-3">{idx + 1}</td>
-                <td className="px-3 py-3">{category.name}</td>
-                <td className="px-3 py-3 hidden md:table-cell">{category.description}</td>
-                <td className="px-3 py-3 hidden md:table-cell">{category.slug}</td>
-                <td className="px-3 py-3">{category.type}</td>
-                <td className="px-3 py-3">
-                  <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${category.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {categories.map((category, index) => (
+              <tr key={category.id} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="px-3 py-2 whitespace-nowrap">{index + 1}</td>
+                <td className="px-3 py-2 whitespace-nowrap font-medium text-gray-900">{category.name}</td>
+                <td className="px-3 py-2 hidden md:table-cell">{category.description}</td>
+                <td className="px-3 py-2 hidden md:table-cell">{category.slug}</td>
+                <td className="px-3 py-2">{category.type}</td>
+                <td className="px-3 py-2">
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    category.status === 'Hiển thị'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
                     {category.status}
                   </span>
                 </td>
-                <td className="px-3 py-3 hidden sm:table-cell">{category.level}</td>
-                <td className="px-3 py-3 hidden sm:table-cell">{category.parentName || '-'}</td>
-                <td className="px-3 py-3 text-right">
-                  <Link href={`/admin/categories/${category.id}`} className="text-blue-600 hover:text-blue-900 mr-3">
+                <td className="px-3 py-2 hidden sm:table-cell">{category.level}</td>
+                <td className="px-3 py-2 hidden sm:table-cell">{category.parent}</td>
+                <td className="px-3 py-2 text-right space-x-1">
+                  <Link href={`/admin/categories/edit/${category.id}`} className="text-blue-600 hover:text-blue-900">
                     <i className="fas fa-edit"></i>
                   </Link>
-                  <button onClick={() => handleDelete(category.id)} className="text-red-600 hover:text-red-900">
+                  <button className="text-red-600 hover:text-red-900">
                     <i className="fas fa-trash"></i>
                   </button>
                 </td>
@@ -162,12 +152,12 @@ export default function CategoriesPage() {
           </tbody>
         </table>
       </div>
-  
+
       {/* Phân trang */}
       <div className="bg-white px-3 py-3 mt-4 border-t border-gray-200">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
           <div className="text-sm text-gray-700">
-            Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">5</span> của <span className="font-medium">5</span> danh mục
+            Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">{categories.length}</span> của <span className="font-medium">{categories.length}</span> danh mục
           </div>
           <nav className="inline-flex rounded-md shadow-sm" aria-label="Pagination">
             <a href="#" className="px-2 py-2 border border-gray-300 text-gray-500 hover:bg-gray-50 rounded-l-md">
@@ -184,5 +174,4 @@ export default function CategoriesPage() {
       </div>
     </div>
   );
-  
 }

@@ -1,3 +1,5 @@
+'use client';
+
 import { FC } from 'react';
 
 const SettingsPage: FC = () => {
@@ -58,40 +60,40 @@ const SettingsPage: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tên website</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 defaultValue={settings.general.siteName}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả website</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 defaultValue={settings.general.siteDescription}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email liên hệ</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 defaultValue={settings.general.contactEmail}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Số điện thoại</label>
-              <input 
-                type="tel" 
+              <input
+                type="tel"
                 defaultValue={settings.general.contactPhone}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Địa chỉ</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 defaultValue={settings.general.address}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
@@ -109,32 +111,32 @@ const SettingsPage: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Facebook</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 defaultValue={settings.social.facebook}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Instagram</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 defaultValue={settings.social.instagram}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Youtube</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 defaultValue={settings.social.youtube}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Twitter</label>
-              <input 
-                type="url" 
+              <input
+                type="url"
                 defaultValue={settings.social.twitter}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
@@ -152,16 +154,16 @@ const SettingsPage: FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Giá trị đơn hàng miễn phí vận chuyển</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 defaultValue={settings.shipping.freeShippingThreshold}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Phí vận chuyển mặc định</label>
-              <input 
-                type="number" 
+              <input
+                type="number"
                 defaultValue={settings.shipping.defaultShippingFee}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
@@ -212,24 +214,24 @@ const SettingsPage: FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm text-gray-500">Ngân hàng</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       defaultValue={account.bank}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1"
                     />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-500">Số tài khoản</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       defaultValue={account.accountNumber}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1"
                     />
                   </div>
                   <div>
                     <label className="block text-sm text-gray-500">Tên tài khoản</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       defaultValue={account.accountName}
                       className="w-full border border-gray-300 rounded-md px-3 py-2 mt-1"
                     />
@@ -250,15 +252,15 @@ const SettingsPage: FC = () => {
           <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Meta Title</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 defaultValue={settings.seo.metaTitle}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Meta Description</label>
-              <textarea 
+              <textarea
                 defaultValue={settings.seo.metaDescription}
                 rows={3}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
@@ -266,8 +268,8 @@ const SettingsPage: FC = () => {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Meta Keywords</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 defaultValue={settings.seo.metaKeywords}
                 className="w-full border border-gray-300 rounded-md px-3 py-2"
               />
@@ -278,9 +280,12 @@ const SettingsPage: FC = () => {
 
       {/* Nút lưu */}
       <div className="flex justify-end">
-        <button 
+        <button
           type="button"
           className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+          onClick={() => {
+            alert('Đã lưu thay đổi thành công!');
+          }}
         >
           Lưu thay đổi
         </button>

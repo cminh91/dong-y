@@ -1,9 +1,8 @@
 'use client';
-import { FC, useEffect, useState } from 'react';
+import { FC, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { getAllProducts, deleteProduct } from '@/lib/queries';
 
 type Product = {
   id: string;
@@ -12,35 +11,41 @@ type Product = {
   category: { name: string };
   price: number;
   stock: number;
-  // Assuming status is derived or added later, using stock for now
-  // status: string;
 };
 
 const ProductsPage: FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Dữ liệu mẫu thay thế cho dữ liệu từ Prisma
+  const [products, setProducts] = useState<Product[]>([
+    {
+      id: '1',
+      name: 'HEPASAKY GOLD',
+      imageUrls: ['/images/hepasaky.png'],
+      category: { name: 'Thuốc bổ gan' },
+      price: 320000,
+      stock: 25
+    },
+    {
+      id: '2',
+      name: 'LYPASAKY',
+      imageUrls: ['/images/lypasaky.png'],
+      category: { name: 'Thuốc bổ' },
+      price: 450000,
+      stock: 15
+    },
+    {
+      id: '3',
+      name: 'Trà Thảo Mộc',
+      imageUrls: ['/images/product-placeholder.png'],
+      category: { name: 'Trà thảo dược' },
+      price: 120000,
+      stock: 0
+    }
+  ]);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setIsLoading(true);
-        const data = await getAllProducts();
-        setProducts(data);
-      } catch (error) {
-        toast.error('Lỗi khi tải danh sách sản phẩm');
-        console.error(error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchProducts();
-  }, []);
-
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) return;
     try {
-      await deleteProduct(id);
-
+      // Xóa sản phẩm khỏi state (không gọi API)
       setProducts(products.filter(p => p.id !== id));
       toast.success('Xóa sản phẩm thành công');
     } catch (error) {
@@ -48,15 +53,6 @@ const ProductsPage: FC = () => {
       console.error(error);
     }
   };
-
-
-  if (isLoading) {
-    return (
-      <div className="container mx-auto px-4 py-6 flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
 
   return (

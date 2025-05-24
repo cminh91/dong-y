@@ -1,7 +1,7 @@
 import { FC } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { createProductSlug } from '@/utils/stringUtils';
+import { createProductSlug, toSlug } from '@/utils/stringUtils';
 
 interface ProductProps {
   id: string;
@@ -20,8 +20,8 @@ const ProductsPage: FC = () => {
   const products: ProductProps[] = [
     {
       id: '1',
-      name: 'Hoàng Liên Giải Độc Hoàn',
-      image: 'https://images.unsplash.com/photo-1611485988300-b7ef6818e268?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1074&q=80',
+      name: 'LypaSaky',
+      image: '/images/lypasaky.png',
       description: 'Giải độc gan, hỗ trợ điều trị viêm gan, vàng da',
       price: 320000,
       oldPrice: 380000,
@@ -31,8 +31,8 @@ const ProductsPage: FC = () => {
     },
     {
       id: '2',
-      name: 'Thập Toàn Đại Bổ Hoàn',
-      image: 'https://images.unsplash.com/photo-1471193945509-9ad0617afabf?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
+      name: 'HepaSaky',
+      image: '/images/hepasaky.png',
       description: 'Tăng cường sức khỏe, bồi bổ cơ thể, chống suy nhược',
       price: 450000,
       oldPrice: 530000,
@@ -60,20 +60,19 @@ const ProductsPage: FC = () => {
         <div className="md:w-1/4">
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-xl font-bold mb-4">Lọc sản phẩm</h2>
-            
+
             <div className="mb-6">
               <h3 className="font-semibold mb-3">Danh mục</h3>
               <div className="space-y-2">
                 {categories.map((category, index) => (
-                  <label key={index} className="flex items-center">
-                    <input
-                      type="radio"
-                      name="category"
-                      className="form-radio text-green-600"
-                      defaultChecked={index === 0}
-                    />
-                    <span className="ml-2">{category}</span>
-                  </label>
+                  <div key={index} className="flex items-center">
+                    <Link
+                      href={index === 0 ? "/san-phams" : `/san-phams/${toSlug(category)}`}
+                      className="ml-2 hover:text-green-600"
+                    >
+                      {category}
+                    </Link>
+                  </div>
                 ))}
               </div>
             </div>
@@ -160,9 +159,9 @@ const ProductsPage: FC = () => {
             {products.map(product => (
               <div key={product.id} className="card group">
                 <div className="relative overflow-hidden">
-                  <Image 
-                    src={product.image} 
-                    alt={product.name} 
+                  <Image
+                    src={product.image}
+                    alt={product.name}
                     className="w-full h-64 object-cover"
                     width={300}
                     height={250}

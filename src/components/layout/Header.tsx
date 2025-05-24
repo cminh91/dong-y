@@ -6,6 +6,7 @@ import Image from 'next/image';
 import layoutData from '@/data/layout.json';
 import { FC } from 'react';
 import { HeaderData } from '@/types/layout';
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 // Thay đổi interface HeaderProps thành:
 interface HeaderProps extends Partial<HeaderData> {
@@ -13,7 +14,6 @@ interface HeaderProps extends Partial<HeaderData> {
 }
 
 const Header: FC<HeaderProps> = (props) => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const defaultProps = {
     ...layoutData.header,
@@ -27,7 +27,7 @@ const Header: FC<HeaderProps> = (props) => {
   }, []);
 
   const { isLoggedIn, userName, cartItemCount, productCategories, blogCategories, aboutCategories } = defaultProps;
-  const balance = 0;
+  const balance = 1250000; // Giả lập số dư tài khoản
 
   const handleSearch = (term: string) => {
     console.log('Tìm kiếm:', term);
@@ -50,9 +50,9 @@ const Header: FC<HeaderProps> = (props) => {
                     Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
                   </span>
                   <Link href="/tai-khoan" className="flex items-center space-x-2 hover:text-green-600">
-  <i className="fas fa-user-circle text-2xl text-green-600"></i>
-  <span>{userName}</span>
-</Link>
+                    <i className="fas fa-user-circle text-2xl text-green-600"></i>
+                    <span>{userName}</span>
+                  </Link>
 
                 </>
               ) : (
@@ -72,23 +72,95 @@ const Header: FC<HeaderProps> = (props) => {
       {/* Main header */}
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3">
-            <div className="relative w-12 h-12 lg:w-14 lg:h-14">
-              <Image
-                src="/images/logo.jpg"
-                alt="HepaSaky Gold"
-                width={100}
-                height={100}
-                style={{ objectFit: 'contain' }}
-                priority
-              />
+          {/* Left Side: Mobile Menu Button + Logo */}
+          <div className="flex items-center">
+            {/* Mobile Menu Button */}
+            <div className="lg:hidden mr-3">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button className="text-gray-600 hover:text-green-600">
+                    <i className="fas fa-bars text-2xl"></i>
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="left" className="p-0 w-[280px]">
+                  <div className="h-full flex flex-col">
+                    {/* Hiển thị thông tin người dùng và số dư nếu đã đăng nhập */}
+                    {mounted && isLoggedIn && (
+                      <div className="px-4 py-3 bg-green-50 border-b">
+                        <div className="flex items-center space-x-2">
+                          <i className="fas fa-user text-2xl text-green-600"></i>
+                          <div>
+                            <div className="font-medium">{userName}</div>
+                            <div className="text-green-600 text-sm font-medium">
+                              Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Tìm kiếm */}
+                    <div className="px-4 py-3 bg-gray-50 border-b">
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Tìm kiếm sản phẩm..."
+                          className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:border-green-500 focus:outline-none"
+                          onChange={(e) => handleSearch(e.target.value)}
+                        />
+                        <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                      </div>
+                    </div>
+
+                    {/* Menu items */}
+                    <nav className="flex-1 overflow-y-auto">
+                      <ul className="py-2">
+                        <li><Link href="/" className="block px-4 py-2 hover:bg-gray-50">Trang chủ</Link></li>
+                        <li><Link href="/san-phams" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link></li>
+                        <li><Link href="/gioi-thieu" className="block px-4 py-2 hover:bg-gray-50">Giới thiệu</Link></li>
+                        <li><Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link></li>
+                        <li><Link href="/lien-he" className="block px-4 py-2 hover:bg-gray-50">Liên hệ</Link></li>
+                        {mounted && isLoggedIn ? (
+                          <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">Tài khoản</Link></li>
+                        ) : (
+                          <>
+                            <li><Link href="/dang-nhap" className="block px-4 py-2 hover:bg-gray-50">Đăng nhập</Link></li>
+                            <li><Link href="/dang-ky" className="block px-4 py-2 hover:bg-gray-50">Đăng ký</Link></li>
+                          </>
+                        )}
+                      </ul>
+                    </nav>
+
+                    {/* Footer */}
+                    <div className="border-t py-4 px-4">
+                      <div className="text-sm text-gray-500">
+                        <div className="mb-2"><i className="fas fa-phone-alt mr-2"></i>Hotline: 1900 1234</div>
+                        <div><i className="fas fa-envelope mr-2"></i>Email: contact@hepasaky.com</div>
+                      </div>
+                    </div>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
-            <div className="flex flex-col">
-              <span className="text-lg lg:text-xl font-bold text-blue-900">CÔNG TY TNHH THƯƠNG MẠI KND</span>
-              <span className="text-xs lg:text-sm text-red-500">Thực phẩm bảo vệ sức khoẻ</span>
-            </div>
-          </Link>
+
+            {/* Logo */}
+            <Link href="/" className="flex items-center space-x-3">
+              <div className="relative w-12 h-12 lg:w-14 lg:h-14">
+                <Image
+                  src="/images/logo.jpg"
+                  alt="HepaSaky Gold"
+                  width={100}
+                  height={100}
+                  style={{ objectFit: 'contain' }}
+                  priority
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg lg:text-xl font-bold text-blue-900">CÔNG TY TNHH THƯƠNG MẠI KND</span>
+                <span className="text-xs lg:text-sm text-red-500">Thực phẩm bảo vệ sức khoẻ</span>
+              </div>
+            </Link>
+          </div>
 
           {/* Search - Desktop */}
           <div className="hidden lg:block flex-1 max-w-2xl mx-8">
@@ -105,8 +177,17 @@ const Header: FC<HeaderProps> = (props) => {
             </div>
           </div>
 
-          {/* Cart & Mobile Menu Button */}
+          {/* Cart & Balance */}
           <div className="flex items-center space-x-4">
+            {/* Hiển thị icon người dùng trên mobile */}
+            {mounted && isLoggedIn && (
+              <div className="lg:hidden">
+                <Link href="/tai-khoan" className="block p-2">
+                  <i className="fas fa-user text-xl text-green-600"></i>
+                </Link>
+              </div>
+            )}
+
             <Link href="/gio-hang" className="relative p-2">
               <i className="fas fa-shopping-cart text-xl text-gray-600"></i>
               {cartItemCount > 0 && (
@@ -115,47 +196,8 @@ const Header: FC<HeaderProps> = (props) => {
                 </span>
               )}
             </Link>
-
-            <button
-              className="lg:hidden text-gray-600 hover:text-green-600"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            >
-              <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-2xl`}></i>
-            </button>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Menu */}
-      <div className={`lg:hidden ${isMobileMenuOpen ? 'block' : 'hidden'}`}>
-        <div className="px-4 py-3 bg-gray-50">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:border-green-500 focus:outline-none"
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-            <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-          </div>
-        </div>
-        <nav className="border-t">
-          <ul className="py-2">
-            <li><Link href="/" className="block px-4 py-2 hover:bg-gray-50 text">Trang chủ</Link></li>
-            <li><Link href="/san-phams" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link></li>
-            <li><Link href="/gioi-thieu" className="block px-4 py-2 hover:bg-gray-50">Giới thiệu</Link></li>
-            <li><Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link></li>
-            <li><Link href="/lien-he" className="block px-4 py-2 hover:bg-gray-50">Liên hệ</Link></li>
-            {mounted && isLoggedIn ? (
-              <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">Tài khoản</Link></li>
-            ) : (
-              <>
-                <li><Link href="/dang-nhap" className="block px-4 py-2 hover:bg-gray-50">Đăng nhập</Link></li>
-                <li><Link href="/dang-ky" className="block px-4 py-2 hover:bg-gray-50">Đăng ký</Link></li>
-              </>
-            )}
-          </ul>
-        </nav>
       </div>
 
       {/* Desktop Navigation */}
