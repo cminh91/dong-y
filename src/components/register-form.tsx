@@ -1,155 +1,457 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { ChevronLeft, ChevronRight, Check, Upload, Camera, Eye, EyeOff } from 'lucide-react'
+import { useRouter, useSearchParams } from "next/navigation"
+import { Eye, EyeOff, Upload, Gift } from 'lucide-react'
+import { toast } from "sonner"
+import { registerAction } from "@/lib/auth-actions"
+import { uploadImageAction } from "@/lib/upload-actions"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+
+interface FormErrors {
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+  fullName?: string;
+  phoneNumber?: string;
+  address?: string;
+  referralCode?: string;
+  idCardNumber?: string;
+  frontIdImage?: string;
+  backIdImage?: string;
+  bankName?: string;
+  accountNumber?: string;
+  branch?: string;
+  accountName?: string;
+}
+
+interface FormData {
+  fullName: string;
+  phoneNumber: string;
+  address: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  idCardNumber: string;
+  bankName: string;
+  accountNumber: string;
+  branch: string;
+  accountName: string;
+}
 
 export function RegisterForm() {
-  const [step, setStep] = useState(1)
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [errors, setErrors] = useState<FormErrors>({})
+  const [role, setRole] = useState("CUSTOMER")
+  const [referralCode, setReferralCode] = useState("")
   const [frontImagePreview, setFrontImagePreview] = useState<string | null>(null)
   const [backImagePreview, setBackImagePreview] = useState<string | null>(null)
-  
-  const formRef = useRef<HTMLFormElement>(null)
+  const [frontImageUrl, setFrontImageUrl] = useState<string | null>(null)
+  const [backImageUrl, setBackImageUrl] = useState<string | null>(null)
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null)
+  const [step, setStep] = useState(1);
 
-  const nextStep = () => {
-    if (step < 3) setStep(step + 1)
-  }
+  // State để lưu dữ liệu form qua các bước
+  const [formData, setFormData] = useState<FormData>({
+    fullName: '',
+    phoneNumber: '',
+    address: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    idCardNumber: '',
+    bankName: '',
+    accountNumber: '',
+    branch: '',
+    accountName: ''
+  });
 
-  const prevStep = () => {
-    if (step > 1) setStep(step - 1)
-  }
+  // Lấy mã giới thiệu từ URL khi component mount
+  useEffect(() => {
+    const refCode = searchParams.get('ref')
+    if (refCode) {
+      setReferralCode(refCode)
+    }
+  }, [searchParams])
 
-  const handleFileChange = (side: "front" | "back", e: React.ChangeEvent<HTMLInputElement>) => {
+  // Helper để validate từng bước
+  const validateStep = (currentStep: number): boolean => {
+    const newErrors: FormErrors = {};
+    let isValid = true;
+
+    if (currentStep === 1) {
+      // Validate thông tin cá nhân (bắt buộc cho tất cả vai trò)
+      if (!formData.email) {
+        newErrors.email = "Email là bắt buộc";
+        isValid = false;
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        newErrors.email = "Email không hợp lệ";
+        isValid = false;
+      }
+
+      if (!formData.password) {
+        newErrors.password = "Mật khẩu là bắt buộc";
+        isValid = false;
+      } else if (formData.password.length < 6) {
+        newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+        isValid = false;
+      }
+
+      if (!formData.confirmPassword) {
+        newErrors.confirmPassword = "Xác nhận mật khẩu là bắt buộc";
+        isValid = false;
+      } else if (formData.confirmPassword !== formData.password) {
+        newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
+        isValid = false;
+      }
+
+      if (!formData.fullName) {
+        newErrors.fullName = "Họ tên là bắt buộc";
+        isValid = false;
+      }
+
+      if (!formData.phoneNumber) {
+        newErrors.phoneNumber = "Số điện thoại là bắt buộc";
+        isValid = false;
+      } else if (!/^[0-9]{10,11}$/.test(formData.phoneNumber)) {
+        newErrors.phoneNumber = "Số điện thoại không hợp lệ";
+        isValid = false;
+      }
+
+      if (!formData.address) {
+        newErrors.address = "Địa chỉ là bắt buộc";
+        isValid = false;
+      }
+    } else if (currentStep === 2) {
+      // Validate CCCD/CMND (bắt buộc cho tất cả vai trò)
+      if (!formData.idCardNumber) {
+        newErrors.idCardNumber = "Số CMND/CCCD là bắt buộc";
+        isValid = false;
+      } else if (!/^[0-9]{9,12}$/.test(formData.idCardNumber)) {
+        newErrors.idCardNumber = "Số CMND/CCCD không hợp lệ";
+        isValid = false;
+      }
+
+      if (!frontImageUrl) {
+        newErrors.frontIdImage = "Vui lòng tải lên ảnh CCCD mặt trước";
+        isValid = false;
+      }
+
+      if (!backImageUrl) {
+        newErrors.backIdImage = "Vui lòng tải lên ảnh CCCD mặt sau";
+        isValid = false;
+      }
+    } else if (currentStep === 3) {
+      // Validate thông tin ngân hàng (bắt buộc cho tất cả vai trò)
+      if (!formData.bankName) {
+        newErrors.bankName = "Tên ngân hàng là bắt buộc";
+        isValid = false;
+      }
+
+      if (!formData.accountNumber) {
+        newErrors.accountNumber = "Số tài khoản là bắt buộc";
+        isValid = false;
+      } else if (!/^[0-9]{10,16}$/.test(formData.accountNumber)) {
+        newErrors.accountNumber = "Số tài khoản không hợp lệ";
+        isValid = false;
+      }
+
+      if (!formData.branch) {
+        newErrors.branch = "Chi nhánh là bắt buộc";
+        isValid = false;
+      }
+
+      if (!formData.accountName) {
+        newErrors.accountName = "Tên chủ tài khoản là bắt buộc";
+        isValid = false;
+      }
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Helper để cập nhật form data
+  const handleFormChange = (field: keyof FormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+  const handleFileChange = async (side: "front" | "back", e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0]
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        if (side === "front") {
-          setFrontImagePreview(event.target?.result as string)
+      const file = e.target.files[0];
+
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Vui lòng chọn file ảnh");
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("Kích thước file không được vượt quá 5MB");
+        return;
+      }
+
+      try {
+        // Set uploading state
+        setUploadingImage(side);
+
+        // Preview image
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (side === "front") {
+            setFrontImagePreview(event.target?.result as string);
+          } else {
+            setBackImagePreview(event.target?.result as string);
+          }
+        };
+        reader.readAsDataURL(file);
+
+        // Upload image using server action
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const result = await uploadImageAction(formData);
+
+        if (result.success) {
+          // Store the uploaded image URL
+          if (side === "front") {
+            setFrontImageUrl(result.url);
+          } else {
+            setBackImageUrl(result.url);
+          }
+          toast.success("Ảnh đã được tải lên thành công");
         } else {
-          setBackImagePreview(event.target?.result as string)
+          toast.error("Lỗi khi tải ảnh lên");
+        }
+      } catch (error) {
+        console.error("Upload error:", error);
+        toast.error("Lỗi khi tải ảnh lên. Vui lòng thử lại.");
+
+        // Clear preview if upload failed
+        if (side === "front") {
+          setFrontImagePreview(null);
+        } else {
+          setBackImagePreview(null);
+        }
+      } finally {
+        setUploadingImage(null);
+      }
+    }
+  };
+
+  // Submit form ở bước cuối
+  const handleStepSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    // Nếu chưa phải bước cuối, validate và chuyển bước tiếp theo
+    if (step < 3) {
+      // Validate step hiện tại, nếu ok thì next step
+      if (validateStep(step)) {
+        setStep(step + 1);
+      }
+      return;
+    }
+
+    // Bước cuối (step 3): validate toàn bộ và submit
+    setLoading(true);
+    setErrors({});
+    try {
+      // Validate tất cả các bước trước khi submit
+      let valid = true;
+      for (let s = 1; s <= 3; s++) {
+        if (!validateStep(s)) {
+          valid = false;
+          setStep(s);
+          break;
         }
       }
-      reader.readAsDataURL(file)
-    }
-  }
+      if (!valid) {
+        setLoading(false);
+        return;
+      }
+        // Tạo FormData từ state để gửi tất cả thông tin
+      const submitFormData = new FormData();
+      submitFormData.append("role", role);
+      submitFormData.append("fullName", formData.fullName);
+      submitFormData.append("phoneNumber", formData.phoneNumber);
+      submitFormData.append("address", formData.address);
+      submitFormData.append("email", formData.email);
+      submitFormData.append("password", formData.password);
+      submitFormData.append("confirmPassword", formData.confirmPassword);
+      submitFormData.append("idCardNumber", formData.idCardNumber);
+      submitFormData.append("bankName", formData.bankName);
+      submitFormData.append("accountNumber", formData.accountNumber);
+      submitFormData.append("branch", formData.branch);
+      submitFormData.append("accountName", formData.accountName);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (step < 3) {
-      nextStep()
+      // Add referral code if exists
+      if (referralCode) {
+        submitFormData.append("referralCode", referralCode);
+      }
+
+      if (frontImageUrl) submitFormData.append("frontIdImage", frontImageUrl);
+      if (backImageUrl) submitFormData.append("backIdImage", backImageUrl);
+
+      const result = await registerAction(submitFormData);
+      console.log("Registration result:", result);
+
+      if (result.success) {
+        toast.success("Đăng ký thành công!");
+        router.push("/dang-ky-thanh-cong");
+      } else {
+        // Hiển thị lỗi validation trên form
+        if (result.field) {
+          setErrors({ [result.field]: result.error });
+        } else {
+          toast.error(result.error);
+        }
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error("Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Stepper */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              step >= 1 ? "bg-green-600 text-white" : "bg-gray-200"
-            }`}
-          >
-            {step > 1 ? <Check className="h-5 w-5" /> : "1"}
-          </div>
-          <div
-            className={`h-1 flex-1 ${step >= 2 ? "bg-green-600" : "bg-gray-200"}`}
-          ></div>
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              step >= 2 ? "bg-green-600 text-white" : "bg-gray-200"
-            }`}
-          >
-            {step > 2 ? <Check className="h-5 w-5" /> : "2"}
-          </div>
-          <div
-            className={`h-1 flex-1 ${step >= 3 ? "bg-green-600" : "bg-gray-200"}`}
-          ></div>
-          <div
-            className={`flex h-10 w-10 items-center justify-center rounded-full ${
-              step >= 3 ? "bg-green-600 text-white" : "bg-gray-200"
-            }`}
-          >
-            3
-          </div>
-        </div>
-        <div className="mt-2 flex justify-between text-sm">
-          <span
-            className={step >= 1 ? "font-medium text-green-600" : "text-gray-500"}
-          >
-            Thông tin cá nhân
-          </span>
-          <span
-            className={step >= 2 ? "font-medium text-green-600" : "text-gray-500"}
-          >
-            CCCD/CMND
-          </span>
-          <span
-            className={step >= 3 ? "font-medium text-green-600" : "text-gray-500"}
-          >
-            Tài khoản ngân hàng
-          </span>
-        </div>
+      <div className="space-y-2 text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Đăng ký tài khoản
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Điền thông tin để tạo tài khoản mới
+        </p>
       </div>
 
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-        {/* Step 1: Personal Information */}
+      {/* Hiển thị thông tin mã giới thiệu nếu có */}
+      {referralCode && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <Gift className="w-5 h-5 text-green-600" />
+            <div>
+              <p className="text-sm font-medium text-green-800">
+                Bạn được giới thiệu bởi mã: <span className="font-mono">{referralCode}</span>
+              </p>
+              <p className="text-xs text-green-600">
+                Bạn sẽ được hưởng các ưu đãi đặc biệt khi đăng ký!
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      <form onSubmit={handleStepSubmit} className="space-y-6">
+        {/* Stepper */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className={`h-2 w-2 rounded-full ${step===1?"bg-green-700":"bg-gray-300"}`}></div>
+          <div className={`h-2 w-2 rounded-full ${step===2?"bg-green-700":"bg-gray-300"}`}></div>
+          <div className={`h-2 w-2 rounded-full ${step===3?"bg-green-700":"bg-gray-300"}`}></div>
+        </div>
+        {/* Step 1: Thông tin cá nhân */}
         {step === 1 && (
           <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="role">Vai trò</Label>
+              <Select value={role} onValueChange={setRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn vai trò" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CUSTOMER">Khách hàng</SelectItem>
+                  <SelectItem value="STAFF">Nhân viên</SelectItem>
+                  <SelectItem value="COLLABORATOR">Cộng tác viên</SelectItem>
+                  <SelectItem value="AGENT">Đại lý</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="fullName">Họ và tên đầy đủ *</Label>
-                <Input id="fullName" name="fullName" placeholder="Nguyễn Văn A" required />
+                <Label htmlFor="fullName">Họ và tên *</Label>
+                <Input
+                  id="fullName"
+                  name="fullName"
+                  placeholder="Nguyễn Văn A"
+                  required
+                  value={formData.fullName}
+                  onChange={(e) => handleFormChange('fullName', e.target.value)}
+                  className={errors.fullName ? "border-red-500" : ""}
+                />
+                {errors.fullName && (
+                  <p className="text-sm text-red-500">{errors.fullName}</p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Số điện thoại *</Label>
-                <Input id="phoneNumber" name="phoneNumber" placeholder="0912345678" required />
+                <Input
+                  id="phoneNumber"
+                  name="phoneNumber"
+                  placeholder="0912345678"
+                  required
+                  value={formData.phoneNumber}
+                  onChange={(e) => handleFormChange('phoneNumber', e.target.value)}
+                  className={errors.phoneNumber ? "border-red-500" : ""}
+                />
+                {errors.phoneNumber && (
+                  <p className="text-sm text-red-500">{errors.phoneNumber}</p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="address">Địa chỉ *</Label>
-              <Input id="address" name="address" placeholder="123 Đường ABC, Quận XYZ, TP.HCM" required />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
+              <Input
+                id="address"
+                name="address"
+                placeholder="123 Đường ABC, Quận XYZ, TP.HCM"
+                required
+                value={formData.address}
+                onChange={(e) => handleFormChange('address', e.target.value)}
+                className={errors.address ? "border-red-500" : ""}
+              />
+              {errors.address && (
+                <p className="text-sm text-red-500">{errors.address}</p>
+              )}
+            </div>            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>
-                <Input id="email" name="email" type="email" placeholder="example@email.com" required />
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="example@email.com"
+                  required
+                  value={formData.email}
+                  onChange={(e) => handleFormChange('email', e.target.value)}
+                  className={errors.email ? "border-red-500" : ""}
+                />
+                {errors.email && (
+                  <p className="text-sm text-red-500">{errors.email}</p>
+                )}
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="referralCode">Mã giới thiệu</Label>
-                <Input id="referralCode" name="referralCode" placeholder="Nhập mã giới thiệu (nếu có)" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="idCardNumber">Số CCCD/CMND *</Label>
-              <Input id="idCardNumber" name="idCardNumber" placeholder="079123456789" required />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="password">Mật khẩu *</Label>
                 <div className="relative">
-                  <Input 
-                    id="password" 
-                    name="password" 
-                    type={showPassword ? "text" : "password"} 
-                    required 
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    required
+                    value={formData.password}
+                    onChange={(e) => handleFormChange('password', e.target.value)}
+                    className={errors.password ? "border-red-500" : ""}
                   />
                   <Button
                     type="button"
@@ -161,6 +463,9 @@ export function RegisterForm() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500">{errors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -171,6 +476,9 @@ export function RegisterForm() {
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     required
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleFormChange('confirmPassword', e.target.value)}
+                    className={errors.confirmPassword ? "border-red-500" : ""}
                   />
                   <Button
                     type="button"
@@ -182,268 +490,245 @@ export function RegisterForm() {
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </Button>
                 </div>
+                {errors.confirmPassword && (
+                  <p className="text-sm text-red-500">{errors.confirmPassword}</p>
+                )}
               </div>
             </div>
+          </div>
+        )}        {/* Step 2: CCCD/CMND */}
+        {step === 2 && (
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">CCCD/CMND</h3>
 
             <div className="space-y-2">
-              <Label htmlFor="agent">Chọn đại lý/KTV (nếu có)</Label>
-              <Select name="agent">
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn đại lý/KTV" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Không có</SelectItem>
-                  <SelectItem value="agent1">Đại lý Đông Y Hà Nội</SelectItem>
-                  <SelectItem value="agent2">Đại lý Đông Y TP. HCM</SelectItem>
-                  <SelectItem value="agent3">Đại lý Đông Y Đà Nẵng</SelectItem>
-                  <SelectItem value="ktv1">KTV Nguyễn Văn A</SelectItem>
-                  <SelectItem value="ktv2">KTV Trần Thị B</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="idCardNumber">Số CCCD/CMND *</Label>
+              <Input
+                id="idCardNumber"
+                name="idCardNumber"
+                placeholder="079123456789"
+                required
+                value={formData.idCardNumber}
+                onChange={(e) => handleFormChange('idCardNumber', e.target.value)}
+                className={errors.idCardNumber ? "border-red-500" : ""}
+              />
+              {errors.idCardNumber && (
+                <p className="text-sm text-red-500">{errors.idCardNumber}</p>
+              )}
+            </div>            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <Label>CCCD/CMND mặt trước *</Label>
+                <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                  {frontImagePreview ? (
+                    <div className="relative h-full w-full">
+                      <img
+                        src={frontImagePreview}
+                        alt="CCCD mặt trước"
+                        className="h-full w-full rounded object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute right-2 top-2"
+                        onClick={() => {
+                          setFrontImagePreview(null)
+                          setFrontImageUrl(null)
+                        }}
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                      <Upload className="h-10 w-10 text-gray-400" />
+                      <p className="text-sm text-gray-500">
+                        Kéo thả hoặc nhấp để tải lên
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    id="frontImage"
+                    name="frontImage"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("front", e)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => document.getElementById("frontImage")?.click()}
+                  disabled={uploadingImage === "front"}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadingImage === "front" ? "Đang tải lên..." : "Chọn ảnh"}
+                </Button>
+                {errors.frontIdImage && (
+                  <p className="text-sm text-red-500">{errors.frontIdImage}</p>
+                )}
+              </div>              <div className="space-y-4">
+                <Label>CCCD/CMND mặt sau *</Label>
+                <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                  {backImagePreview ? (
+                    <div className="relative h-full w-full">
+                      <img
+                        src={backImagePreview}
+                        alt="CCCD mặt sau"
+                        className="h-full w-full rounded object-cover"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute right-2 top-2"
+                        onClick={() => {
+                          setBackImagePreview(null)
+                          setBackImageUrl(null)
+                        }}
+                      >
+                        Xóa
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                      <Upload className="h-10 w-10 text-gray-400" />
+                      <p className="text-sm text-gray-500">
+                        Kéo thả hoặc nhấp để tải lên
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    id="backImage"
+                    name="backImage"
+                    className="hidden"
+                    accept="image/*"
+                    onChange={(e) => handleFileChange("back", e)}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => document.getElementById("backImage")?.click()}
+                  disabled={uploadingImage === "back"}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {uploadingImage === "back" ? "Đang tải lên..." : "Chọn ảnh"}
+                </Button>
+                {errors.backIdImage && (
+                  <p className="text-sm text-red-500">{errors.backIdImage}</p>
+                )}
+              </div>
             </div>
           </div>
-        )}
-
-        {/* Step 2: ID Card Upload */}
-        {step === 2 && (
-          <div className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">CCCD/CMND mặt trước</h3>
-                    <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                      {frontImagePreview ? (
-                        <div className="relative h-full w-full">
-                          <img
-                            src={frontImagePreview}
-                            alt="CCCD mặt trước"
-                            className="h-full w-full rounded object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute right-2 top-2"
-                            onClick={() => setFrontImagePreview(null)}
-                          >
-                            Xóa
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                          <Upload className="h-10 w-10 text-gray-400" />
-                          <p className="text-sm text-gray-500">
-                            Kéo thả hoặc nhấp để tải lên
-                          </p>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        id="frontImage"
-                        name="frontImage"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange("front", e)}
-                      />
-                    </div>
-                    <Tabs defaultValue="upload">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="upload">Tải lên</TabsTrigger>
-                        <TabsTrigger value="camera">Chụp ảnh</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="upload">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="mt-2 w-full"
-                          onClick={() => document.getElementById("frontImage")?.click()}
-                        >
-                          <Upload className="mr-2 h-4 w-4" /> Chọn ảnh
-                        </Button>
-                      </TabsContent>
-                      <TabsContent value="camera">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="mt-2 w-full"
-                        >
-                          <Camera className="mr-2 h-4 w-4" /> Mở camera
-                        </Button>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-medium">CCCD/CMND mặt sau</h3>
-                    <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                      {backImagePreview ? (
-                        <div className="relative h-full w-full">
-                          <img
-                            src={backImagePreview}
-                            alt="CCCD mặt sau"
-                            className="h-full w-full rounded object-cover"
-                          />
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute right-2 top-2"
-                            onClick={() => setBackImagePreview(null)}
-                          >
-                            Xóa
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                          <Upload className="h-10 w-10 text-gray-400" />
-                          <p className="text-sm text-gray-500">
-                            Kéo thả hoặc nhấp để tải lên
-                          </p>
-                        </div>
-                      )}
-                      <input
-                        type="file"
-                        id="backImage"
-                        name="backImage"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => handleFileChange("back", e)}
-                      />
-                    </div>
-                    <Tabs defaultValue="upload">
-                      <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="upload">Tải lên</TabsTrigger>
-                        <TabsTrigger value="camera">Chụp ảnh</TabsTrigger>
-                      </TabsList>
-                      <TabsContent value="upload">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="mt-2 w-full"
-                          onClick={() => document.getElementById("backImage")?.click()}
-                        >
-                          <Upload className="mr-2 h-4 w-4" /> Chọn ảnh
-                        </Button>
-                      </TabsContent>
-                      <TabsContent value="camera">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="mt-2 w-full"
-                        >
-                          <Camera className="mr-2 h-4 w-4" /> Mở camera
-                        </Button>
-                      </TabsContent>
-                    </Tabs>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        )}
-
-        {/* Step 3: Bank Account Information */}
+        )}        {/* Step 3: Ngân hàng */}
         {step === 3 && (
           <div className="space-y-4">
+            <h3 className="text-lg font-medium">Thông tin ngân hàng</h3>
+
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="bankName">Tên ngân hàng</Label>
-                <Select name="bankName">
-                  <SelectTrigger>
+                <Label htmlFor="bankName">Tên ngân hàng *</Label>
+                <Select name="bankName" required value={formData.bankName} onValueChange={(value) => handleFormChange('bankName', value)}>
+                  <SelectTrigger className={errors.bankName ? "border-red-500" : ""}>
                     <SelectValue placeholder="Chọn ngân hàng" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="vietcombank">Vietcombank</SelectItem>
-                    <SelectItem value="vietinbank">Vietinbank</SelectItem>
-                    <SelectItem value="bidv">BIDV</SelectItem>
-                    <SelectItem value="agribank">Agribank</SelectItem>
-                    <SelectItem value="techcombank">Techcombank</SelectItem>
-                    <SelectItem value="mbbank">MB Bank</SelectItem>
-                    <SelectItem value="tpbank">TPBank</SelectItem>
+                    <SelectItem value="VIETCOMBANK">Vietcombank</SelectItem>
+                    <SelectItem value="VIETINBANK">Vietinbank</SelectItem>
+                    <SelectItem value="BIDV">BIDV</SelectItem>
+                    <SelectItem value="AGRIBANK">Agribank</SelectItem>
+                    <SelectItem value="TECHCOMBANK">Techcombank</SelectItem>
+                    <SelectItem value="MBBANK">MB Bank</SelectItem>
+                    <SelectItem value="TPBANK">TPBank</SelectItem>
                   </SelectContent>
                 </Select>
+                {errors.bankName && (
+                  <p className="text-sm text-red-500">{errors.bankName}</p>
+                )}
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="accountNumber">Số tài khoản</Label>
+                <Label htmlFor="accountNumber">Số tài khoản *</Label>
                 <Input
                   id="accountNumber"
                   name="accountNumber"
                   placeholder="1234567890"
+                  required
+                  value={formData.accountNumber}
+                  onChange={(e) => handleFormChange('accountNumber', e.target.value)}
+                  className={errors.accountNumber ? "border-red-500" : ""}
                 />
+                {errors.accountNumber && (
+                  <p className="text-sm text-red-500">{errors.accountNumber}</p>
+                )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="branch">Chi nhánh</Label>
+              <Label htmlFor="branch">Chi nhánh *</Label>
               <Input
                 id="branch"
                 name="branch"
                 placeholder="Chi nhánh Quận 1"
+                required
+                value={formData.branch}
+                onChange={(e) => handleFormChange('branch', e.target.value)}
+                className={errors.branch ? "border-red-500" : ""}
               />
+              {errors.branch && (
+                <p className="text-sm text-red-500">{errors.branch}</p>
+              )}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="cardNumber">Số thẻ (nếu có)</Label>
-              <Input
-                id="cardNumber"
-                name="cardNumber"
-                placeholder="1234 5678 9012 3456"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="accountName">Tên chủ tài khoản</Label>
+              <Label htmlFor="accountName">Tên chủ tài khoản *</Label>
               <Input
                 id="accountName"
                 name="accountName"
                 placeholder="NGUYEN VAN A"
+                required
+                value={formData.accountName}
+                onChange={(e) => handleFormChange('accountName', e.target.value)}
+                className={errors.accountName ? "border-red-500" : ""}
               />
+              {errors.accountName && (<p className="text-sm text-red-500">{errors.accountName}</p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Navigation buttons */}
-        <div className="flex justify-between pt-4">
-          {step > 1 ? (
-            <Button type="button" variant="outline" onClick={prevStep}>
-              <ChevronLeft className="mr-2 h-4 w-4" /> Quay lại
+        {/* Nút điều hướng bước */}
+        <div className="flex gap-2">
+          {step > 1 && (
+            <Button type="button" variant="outline" onClick={() => setStep(step-1)}>
+              Quay lại
             </Button>
-          ) : (
-            <div></div>
           )}
-
-          {step < 3 ? (
-            <Button
-              type="button"
-              onClick={nextStep}
-              className="bg-green-700 hover:bg-green-800"
-            >
-              Tiếp theo <ChevronRight className="ml-2 h-4 w-4" />
+          {step < 3 && (
+            <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
+              Tiếp tục
             </Button>
-          ) : (
-            <Button
-              type="submit"
-              className="bg-green-700 hover:bg-green-800"
-            >
-              Đăng ký <Check className="ml-2 h-4 w-4" />
+          )}
+          {step === 3 && (
+            <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
+              {loading ? "Đang xử lý..." : "Đăng ký"}
             </Button>
           )}
         </div>
       </form>
 
-      {step === 1 && (
-        <div className="text-center text-sm">
-          Đã có tài khoản?{" "}
-          <Link href="/dang-nhap" className="font-medium text-green-700 hover:text-green-800">
-            Đăng nhập
-          </Link>
-        </div>
-      )}
+      <div className="text-center text-sm">
+        Đã có tài khoản?{" "}
+        <Link href="/dang-nhap" className="font-medium text-green-700 hover:text-green-800">
+          Đăng nhập
+        </Link>
+      </div>
     </div>
   )
 }
+

@@ -116,7 +116,7 @@ const Header: FC<HeaderProps> = (props) => {
                     <nav className="flex-1 overflow-y-auto">
                       <ul className="py-2">
                         <li><Link href="/" className="block px-4 py-2 hover:bg-gray-50">Trang chủ</Link></li>
-                        <li><Link href="/san-phams" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link></li>
+                        <li><Link href="/san-pham" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link></li>
                         <li><Link href="/gioi-thieu" className="block px-4 py-2 hover:bg-gray-50">Giới thiệu</Link></li>
                         <li><Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link></li>
                         <li><Link href="/lien-he" className="block px-4 py-2 hover:bg-gray-50">Liên hệ</Link></li>
@@ -208,7 +208,7 @@ const Header: FC<HeaderProps> = (props) => {
           </li>
 
           <li className="relative group">
-            <Link href="/san-phams" className="py-2 hover:text-green-500">Sản phẩm</Link>
+            <Link href="/san-pham" className="py-2 hover:text-green-500">Sản phẩm</Link>
             {productCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
                 {productCategories.map((cat) => (

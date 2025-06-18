@@ -1,6 +1,43 @@
 import { LoginForm } from "@/components/login-form"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
+import jwt from "jsonwebtoken"
 
-export default function LoginPage() {
+interface UserPayload {
+  email: string;
+  role: string;
+  id: string;
+}
+
+const verifyToken = (token: string): UserPayload | null => {
+  try {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error("JWT_SECRET is not defined");
+    }
+    const decoded = jwt.verify(token, secret) as UserPayload;
+    return decoded;
+  } catch (error) {
+    console.error("Token verification failed:", error);
+    return null;
+  }
+};
+
+export default async function LoginPage() {
+  const cookieStore = await cookies();
+  const authToken = cookieStore.get("authToken")?.value;
+
+  if (authToken) {
+    const userPayload = verifyToken(authToken);
+    if (userPayload) {
+      if (userPayload.role === "ADMIN") {
+        redirect("/admin");
+      } else {
+        redirect("/tai-khoan");
+      }
+    }
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-green-50 to-green-100 p-4">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg md:p-8">

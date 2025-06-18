@@ -1,38 +1,40 @@
-import { Roboto, Poppins } from "next/font/google";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
+import { Toaster } from "sonner";
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
-const roboto = Roboto({
-  variable: "--font-roboto",
-  subsets: ["latin", "vietnamese"],
-  weight: ["300", "400", "500", "700"],
-  display: "swap",
-});
+import { CartProvider } from "@/context/cart-context";
 
-const poppins = Poppins({
-  variable: "--font-poppins",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
+export const metadata: Metadata = {
+  title: "Đông Y Pharmacy - Thuốc Đông Y Chất Lượng Cao",
+  description: "Chuyên cung cấp các sản phẩm thuốc Đông Y chất lượng cao, an toàn và hiệu quả. Đội ngũ chuyên gia tư vấn tận tình.",
+};
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
-  // Không dùng usePathname ở server component
-  // Có thể truyền props hoặc dùng logic khác ở component con nếu cần phân biệt admin
-  // const isAdminPage = ...;
+}) {
   return (
     <html lang="vi">
       <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css" />
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@8/swiper-bundle.min.css" />
+        <link
+          rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+          integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw=="
+          crossOrigin="anonymous"
+          referrerPolicy="no-referrer"
+        />
       </head>
-      <body className={`${roboto.variable} ${poppins.variable} antialiased`}>
-        <ClientLayoutWrapper>
-          {children}
-        </ClientLayoutWrapper>
+      <body className={inter.className}>
+        <CartProvider>
+          <ClientLayoutWrapper>
+            {children}
+          </ClientLayoutWrapper>
+        </CartProvider>
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );

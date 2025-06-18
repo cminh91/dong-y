@@ -47,7 +47,7 @@ const Footer: FC<Partial<FooterData>> = (props) => {
               <h3 className="text-lg font-bold mb-4 text-primary">Liên kết nhanh</h3>
               <ul className="space-y-2">
                 <li><Link href="/" className="text-gray-800 hover:text-primary">Trang chủ</Link></li>
-                <li><Link href="/san-phams" className="text-gray-800 hover:text-primary">Sản phẩm</Link></li>
+                <li><Link href="/san-pham" className="text-gray-800 hover:text-primary">Sản phẩm</Link></li>
                 <li><Link href="/gioi-thieu" className="text-gray-800 hover:text-primary">Giới thiệu</Link></li>
                 <li><Link href="/tin-tuc" className="text-gray-800 hover:text-primary">Bài viết</Link></li>
                 <li><Link href="/lien-he" className="text-gray-800 hover:text-primary">Liên hệ</Link></li>

@@ -2,119 +2,144 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { Eye, EyeOff, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
+import { loginAction } from "@/lib/auth-actions";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-const loginSchema = z.object({
-  email: z.string().email({ message: "Email không hợp lệ" }),
-  password: z.string().min(1, { message: "Vui lòng nhập mật khẩu" }),
-  rememberMe: z.boolean(),
-});
-
-type LoginFormSchema = z.infer<typeof loginSchema>;
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  const form = useForm<LoginFormSchema>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      email: "",
-      password: "",
-      rememberMe: false,
-    },
-  });
+  const validateForm = (email: string, password: string): boolean => {
+    const newErrors: FormErrors = {};
+    let isValid = true;
 
-  const onSubmit = (data: LoginFormSchema) => {
-    // Placeholder for form submission
+    if (!email) {
+      newErrors.email = "Email là bắt buộc";
+      isValid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Email không hợp lệ";
+      isValid = false;
+    }
+
+    if (!password) {
+      newErrors.password = "Mật khẩu là bắt buộc";
+      isValid = false;
+    } else if (password.length < 6) {
+      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
+    setApiError(null);
+
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    if (!validateForm(email, password)) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await loginAction(formData);
+      toast.success("Đăng nhập thành công");
+    } catch (error) {
+      console.error("Login error:", error);
+      setApiError(error instanceof Error ? error.message : "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại sau.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="example@email.com" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+    <div className="space-y-6">
+      {apiError && (
+        <Alert variant="destructive" className="bg-red-50">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-red-800">
+            {apiError}
+          </AlertDescription>
+        </Alert>
+      )}
 
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Mật khẩu</FormLabel>
-              <FormControl>
-                <div className="relative">
-                  <Input type={showPassword ? "text" : "password"} {...field} />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 text-gray-400 hover:text-gray-600"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex items-center justify-between">
-          <FormField
-            control={form.control}
-            name="rememberMe"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center space-x-2 space-y-0">
-                <FormControl>
-                  <Checkbox checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-                <FormLabel className="text-sm font-normal">Ghi nhớ đăng nhập</FormLabel>
-              </FormItem>
-            )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="example@email.com"
+            required
+            className={errors.email ? "border-red-500" : ""}
           />
-
-          <Link href="/forgot-password" className="text-sm font-medium text-green-700 hover:text-green-800">
-            Quên mật khẩu?
-          </Link>
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email}</p>
+          )}
         </div>
 
-        <Button type="submit" className="w-full bg-green-700 hover:bg-green-800">
-          Đăng nhập
+        <div className="space-y-2">
+          <Label htmlFor="password">Mật khẩu</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={6}
+              className={errors.password ? "border-red-500" : ""}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute right-0 top-0 h-full px-3 py-2 text-gray-400 hover:text-gray-600"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
+          {errors.password && (
+            <p className="text-sm text-red-500">{errors.password}</p>
+          )}
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full bg-green-700 hover:bg-green-800"
+          disabled={loading}
+        >
+          {loading ? "Đang xử lý..." : "Đăng nhập"}
         </Button>
-
-        <div className="text-center text-sm">
-          Chưa có tài khoản?{" "}
-          <Link href="/dang-ky" className="font-medium text-green-700 hover:text-green-800">
-            Đăng ký ngay
-          </Link>
-        </div>
       </form>
-    </Form>
+
+      <div className="text-center text-sm">
+        Chưa có tài khoản?{" "}
+        <Link href="/dang-ky" className="font-medium text-green-700 hover:text-green-800">
+          Đăng ký
+        </Link>
+      </div>
+    </div>
   );
 }

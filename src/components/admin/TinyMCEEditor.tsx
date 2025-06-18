@@ -1,45 +1,75 @@
+"use client";
+
 import React, { FC } from 'react';
 import { Editor } from '@tinymce/tinymce-react';
 
 interface TinyMCEEditorProps {
-  value: string | null;
+  value: string;
   onEditorChange: (content: string) => void;
+  height?: number;
+  placeholder?: string;
 }
 
-const TinyMCEEditor: FC<TinyMCEEditorProps> = ({ value, onEditorChange }) => {
-  const apiKey = process.env.NEXT_PUBLIC_TINYMCE_API_KEY; // Lấy API key từ biến môi trường
-
-  if (!apiKey) {
-    console.error("TinyMCE API key is not set.");
-    // Render a fallback or error message
-    return <div>Lỗi: Không tìm thấy TinyMCE API key.</div>;
-  }
+const TinyMCEEditor: FC<TinyMCEEditorProps> = ({
+  value,
+  onEditorChange,
+  height = 400,
+  placeholder = "Nhập nội dung chi tiết..."
+}) => {
+  // Use API key if available, otherwise use no-api-key for development
+  const apiKey = process.env.NEXT_PUBLIC_TINYMCE_API_KEY || 'no-api-key';
 
   return (
     <Editor
       apiKey={apiKey}
-      init={{
-        height: 500, // Tăng chiều cao
-        menubar: true, // Hiển thị menubar
-        plugins: [
-          'advlist autolink lists link image charmap print preview anchor',
-          'searchreplace visualblocks code fullscreen',
-          'insertdatetime media table paste code help wordcount',
-          'seo', // Ví dụ plugin liên quan đến SEO (cần kiểm tra plugin có tồn tại không)
-          'codesample', // Thêm plugin code sample
-          'linkchecker', // Thêm link checker
-          'visualchars', // Thêm visual characters
-        ],
-        toolbar: 'undo redo | formatselect | ' +
-          'bold italic backcolor | alignleft aligncenter ' +
-          'alignright alignjustify | bullist numlist outdent indent | ' +
-          'removeformat | help | image media table | fullscreen code | restoredraft', // Toolbar mở rộng
-        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
-        // Thêm các tùy chọn cấu hình khác cho SEO nếu cần
-        // Ví dụ: image_advtab: true, link_list: "/my-dynamic-list", ...
-      }}
       value={value || ''}
       onEditorChange={onEditorChange}
+      init={{
+        height: height,
+        menubar: false,
+        plugins: [
+          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+          'insertdatetime', 'media', 'table', 'help', 'wordcount'
+        ],
+        toolbar: 'undo redo | blocks | ' +
+          'bold italic forecolor | alignleft aligncenter ' +
+          'alignright alignjustify | bullist numlist outdent indent | ' +
+          'removeformat | help',
+        content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+        placeholder: placeholder,
+        branding: false,
+        promotion: false,
+        setup: (editor: any) => {
+          editor.on('init', () => {
+            editor.getContainer().style.transition = "border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out";
+          });
+
+          editor.on('focus', () => {
+            editor.getContainer().style.borderColor = "#10b981";
+            editor.getContainer().style.boxShadow = "0 0 0 2px rgba(16, 185, 129, 0.2)";
+          });
+
+          editor.on('blur', () => {
+            editor.getContainer().style.borderColor = "#d1d5db";
+            editor.getContainer().style.boxShadow = "none";
+          });
+        },
+        // Image upload settings
+        images_upload_handler: (blobInfo: any) => {
+          return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              resolve(reader.result as string);
+            };
+            reader.readAsDataURL(blobInfo.blob());
+          });
+        },
+        paste_data_images: true,
+        paste_as_text: false,
+        link_default_target: '_blank',
+        link_assume_external_targets: true
+      }}
     />
   );
 };

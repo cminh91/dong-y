@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { FC } from 'react';
-import { createProductSlug } from '@/utils/stringUtils';
+import { toSlug } from '@/utils/stringUtils';
 
 interface ProductProps {
   id: string;
@@ -22,7 +22,7 @@ interface ProductCardProps extends ProductProps {
 
 const ProductCard: FC<ProductCardProps> = ({ id, name, image, description, price, oldPrice, rating, reviews, badge, reverse }) => {
   return (
-    <Link href={`/san-phams/${createProductSlug(name, id)}`} className={`group flex ${reverse ? 'flex-col md:flex-row-reverse md:text-right md:justify-end' : 'flex-col md:flex-row'} items-center md:items-center gap-4 rounded-lg overflow-hidden shadow hover:shadow-lg hover:scale-[1.02] transition-all duration-300 p-4`}>
+    <Link href={`/san-pham/${toSlug(name)}`} className={`group flex ${reverse ? 'flex-col md:flex-row-reverse md:text-right md:justify-end' : 'flex-col md:flex-row'} items-center md:items-center gap-4 rounded-lg overflow-hidden shadow hover:shadow-lg hover:scale-[1.02] transition-all duration-300 p-4`}>
       <div className="relative overflow-hidden flex-shrink-0 w-full md:w-80">
         <Image
           src={image}
@@ -56,8 +56,8 @@ const ProductCard: FC<ProductCardProps> = ({ id, name, image, description, price
         <p className="text-gray-600 text-sm mb-4">{description}</p>
         <div className={`flex items-center justify-between ${reverse ? 'md:justify-end md:text-right' : ''}`}>
           <div>
-            <span className="font-bold text-green-700">{price.toLocaleString()}₫</span>
-            {oldPrice && <span className="text-gray-500 text-sm line-through ml-2">{oldPrice.toLocaleString()}₫</span>}
+            <span className="font-bold text-green-700">{price?.toLocaleString() || '0'}₫</span>
+            {oldPrice && <span className="text-gray-500 text-sm line-through ml-2">{oldPrice?.toLocaleString() || '0'}₫</span>}
           </div>
          
         </div>
@@ -115,7 +115,7 @@ const FeaturedProducts: FC = () => {
         </div>
         
         <div className="text-center mt-12">
-          <Link href="/san-phams" className="btn-primary inline-flex items-center">
+          <Link href="/san-pham" className="btn-primary inline-flex items-center">
             Xem tất cả sản phẩm
             <i className="fas fa-arrow-right ml-2"></i>
           </Link>

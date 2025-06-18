@@ -106,7 +106,7 @@ const AboutPage: FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <Image 
-              src="/images/herbalist1.jpg" 
+              src="/images/hepasaky.png" 
               alt="TS. Nguyễn Văn A" 
               width={200}
               height={200}
@@ -123,7 +123,7 @@ const AboutPage: FC = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <Image 
-              src="/images/herbalist2.jpg" 
+              src="/images/lypasaky.png" 
               alt="ThS. Trần Thị B" 
               width={200}
               height={200}
@@ -140,7 +140,7 @@ const AboutPage: FC = () => {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-md text-center">
             <Image 
-              src="/images/herbalist1.jpg" 
+              src="/images/trongdong.png" 
               alt="DS. Lê Văn C" 
               width={200}
               height={200}
