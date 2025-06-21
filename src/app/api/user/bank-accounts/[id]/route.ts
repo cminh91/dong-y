@@ -9,7 +9,7 @@ const updateBankAccountSchema = z.object({
   accountNumber: z.string().min(1, 'Số tài khoản không được để trống').optional(),
   accountName: z.string().min(1, 'Tên chủ tài khoản không được để trống').optional(),
   branch: z.string().min(1, 'Chi nhánh không được để trống').optional(),
-  isPrimary: z.boolean().optional()
+  // isPrimary field removed
 });
 
 export async function PUT(
@@ -47,16 +47,7 @@ export async function PUT(
       );
     }
 
-    // If setting as primary, update other accounts
-    if (validatedData.isPrimary) {
-      await prisma.bankAccount.updateMany({
-        where: { 
-          userId: session.user.id,
-          id: { not: id }
-        },
-        data: { isPrimary: false }
-      });
-    }
+    // isPrimary field removed - using single bank account per user
 
     // Update bank account
     const updatedAccount = await prisma.bankAccount.update({
@@ -72,7 +63,7 @@ export async function PUT(
         accountNumber: updatedAccount.accountNumber,
         accountName: updatedAccount.accountName,
         branch: updatedAccount.branch,
-        isPrimary: updatedAccount.isPrimary,
+        // isPrimary field removed
         createdAt: updatedAccount.createdAt.toISOString(),
         updatedAt: updatedAccount.updatedAt.toISOString()
       },

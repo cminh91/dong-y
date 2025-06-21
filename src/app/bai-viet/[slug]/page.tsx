@@ -29,7 +29,8 @@ interface Post {
 // Fetch post from API
 async function fetchPost(slug: string) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = `${baseUrl}/api/posts/by-slug/${slug}`;
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = `${fullBaseUrl}/api/posts/by-slug/${slug}`;
 
   try {
     const response = await fetch(url, {

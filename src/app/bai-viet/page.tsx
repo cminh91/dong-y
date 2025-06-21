@@ -34,7 +34,8 @@ interface PostsPageProps {
 // Fetch posts from API
 async function fetchPosts(searchParams: any) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = new URL('/api/posts', baseUrl);
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = new URL('/api/posts', fullBaseUrl);
 
   // Add search params to URL
   url.searchParams.set('status', 'PUBLISHED'); // Only published posts for public

@@ -23,7 +23,8 @@ interface PostCategory {
 // Fetch post category by ID
 async function fetchPostCategory(id: string): Promise<PostCategory | null> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = `${baseUrl}/api/post-categories/${id}`;
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = `${fullBaseUrl}/api/post-categories/${id}`;
 
   try {
     const response = await fetch(url, {

@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
           ...account,
           // Hide sensitive info, show only last 4 digits
           accountNumber: account.accountNumber ? account.accountNumber.slice(-4).padStart(account.accountNumber.length, '*') : '',
-          isVerified: account.isPrimary // Use isPrimary as verification status
+          isVerified: false // isPrimary field removed - all accounts need admin verification
         })),
         idCards: idCards.map(card => ({
           ...card,
@@ -211,7 +211,7 @@ async function addBankAccount(userId: string, data: any) {
       accountNumber: accountNumber.trim(),
       accountName: accountHolder.trim(), // Use accountName instead of accountHolder
       branch: branch?.trim() || '',
-      isPrimary: false // Requires admin verification
+      // isPrimary field removed
     }
   });
 

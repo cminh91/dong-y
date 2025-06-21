@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
         type: link.type,
         status: link.status,
         originalUrl: product ? `/san-pham/${product.slug}` : '/',
-        affiliateUrl: `${baseUrl}/aff/${userPayload.userId}/${link.slug}`,
+        affiliateUrl: `${baseUrl}/aff/${link.slug}`,
         shortCode: link.slug.toUpperCase().substring(0, 6),
         totalClicks: link.totalClicks,
         totalConversions: link.totalConversions,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { productId, commissionRate } = body
+    const { productId } = body
 
     if (!productId) {
       return NextResponse.json(
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
         type: 'PRODUCT',
         status: 'ACTIVE',
         productId: productId,
-        commissionRate: commissionRate || 0.1, // Default 10%
+        commissionRate: 0.1, // Default 10% - Admin can change this later
         totalClicks: 0,
         totalConversions: 0,
         totalCommission: 0
@@ -261,7 +261,7 @@ export async function POST(request: NextRequest) {
       type: newLink.type,
       status: newLink.status,
       originalUrl: newLink.product ? `/san-pham/${newLink.product.slug}` : '/',
-      affiliateUrl: `${baseUrl}/aff/${userPayload.userId}/${newLink.slug}`,
+      affiliateUrl: `${baseUrl}/aff/${newLink.slug}`,
       shortCode: newLink.slug.toUpperCase().substring(0, 6),
       totalClicks: newLink.totalClicks,
       totalConversions: newLink.totalConversions,
@@ -361,7 +361,7 @@ export async function PUT(request: NextRequest) {
       type: updatedLink.type,
       status: updatedLink.status,
       originalUrl: updatedLink.product ? `/san-pham/${updatedLink.product.slug}` : '/',
-      affiliateUrl: `${baseUrl}/aff/${userPayload.userId}/${updatedLink.slug}`,
+      affiliateUrl: `${baseUrl}/aff/${updatedLink.slug}`,
       shortCode: updatedLink.slug.toUpperCase().substring(0, 6),
       totalClicks: updatedLink.totalClicks,
       totalConversions: updatedLink.totalConversions,

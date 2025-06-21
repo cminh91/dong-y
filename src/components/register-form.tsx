@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Upload, Gift } from 'lucide-react'
 import { toast } from "sonner"
 import { registerAction } from "@/lib/auth-actions"
-import { uploadImageAction } from "@/lib/upload-actions"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -215,22 +214,29 @@ export function RegisterForm() {
         };
         reader.readAsDataURL(file);
 
-        // Upload image using server action
-        const formData = new FormData();
-        formData.append('file', file);
+        // Upload image using Cloudinary API
+        const uploadFormData = new FormData();
+        uploadFormData.append('files', file);
+        uploadFormData.append('folder', 'id-cards'); // Organize in id-cards folder
 
-        const result = await uploadImageAction(formData);
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
 
-        if (result.success) {
-          // Store the uploaded image URL
+        const result = await response.json();
+
+        if (result.success && result.data.files.length > 0) {
+          // Store the uploaded image URL from Cloudinary
+          const uploadedFile = result.data.files[0];
           if (side === "front") {
-            setFrontImageUrl(result.url);
+            setFrontImageUrl(uploadedFile.secure_url);
           } else {
-            setBackImageUrl(result.url);
+            setBackImageUrl(uploadedFile.secure_url);
           }
-          toast.success("Ảnh đã được tải lên thành công");
+          toast.success("Ảnh đã được tải lên Cloudinary thành công");
         } else {
-          toast.error("Lỗi khi tải ảnh lên");
+          toast.error(result.error || "Lỗi khi tải ảnh lên Cloudinary");
         }
       } catch (error) {
         console.error("Upload error:", error);

@@ -6,6 +6,7 @@ import { Metadata } from 'next';
 import HTMLContent from '@/components/common/HTMLContent';
 import AddToCartButton from '@/components/product/AddToCartButton';
 import QuickAddToCart from '@/components/product/QuickAddToCart';
+import AffiliateTracker from '@/components/affiliate/AffiliateTracker';
 
 interface ProductDetailPageProps {
   params: Promise<{ slug: string }>;
@@ -15,7 +16,8 @@ interface ProductDetailPageProps {
 // Fetch product from API
 async function fetchProduct(slug: string) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = `${baseUrl}/api/products/by-slug/${slug}`;
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = `${fullBaseUrl}/api/products/by-slug/${slug}`;
 
   console.log('Fetching product with slug:', slug);
   console.log('API URL:', url);
@@ -74,14 +76,8 @@ const ProductDetailPage: FC<ProductDetailPageProps> = async ({ params, searchPar
   console.log('ProductDetailPage - slug:', slug);
 
   // Check for affiliate tracking parameters
-  const affiliateUserId = urlParams.ref as string;
-  const affiliateLinkId = urlParams.aff as string;
-
-  if (affiliateUserId && affiliateLinkId) {
-    console.log('Affiliate tracking detected:', { affiliateUserId, affiliateLinkId });
-    // Store affiliate info in session/cookie for conversion tracking
-    // This will be used when user makes a purchase
-  }
+  const referralCode = urlParams.ref as string;
+  const affiliateSlug = urlParams.aff as string;
 
   // Fetch product data from API
   const data = await fetchProduct(slug);
@@ -104,23 +100,11 @@ const ProductDetailPage: FC<ProductDetailPageProps> = async ({ params, searchPar
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Affiliate tracking notification */}
-      {affiliateUserId && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                Bạn đang xem sản phẩm thông qua liên kết giới thiệu. Cảm ơn bạn đã ủng hộ!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Affiliate tracking */}
+      <AffiliateTracker
+        affiliateSlug={affiliateSlug}
+        referralCode={referralCode}
+      />
 
       {/* Breadcrumb */}
       <nav className="flex mb-6" aria-label="Breadcrumb">

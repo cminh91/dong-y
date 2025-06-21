@@ -63,7 +63,8 @@ export const metadata: Metadata = {
 // Fetch products from API
 async function fetchProducts(searchParams: SearchParamsType): Promise<FetchProductsResponse> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = new URL('/api/products', baseUrl);
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = new URL('/api/products', fullBaseUrl);
 
   // Add search params to URL
   Object.keys(searchParams).forEach(key => {

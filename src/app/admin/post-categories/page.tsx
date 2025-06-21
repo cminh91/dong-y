@@ -23,7 +23,8 @@ interface PostCategory {
 // Fetch post categories from API
 async function fetchPostCategories() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = `${baseUrl}/api/post-categories?limit=100`;
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = `${fullBaseUrl}/api/post-categories?limit=100`;
 
   try {
     const response = await fetch(url, {

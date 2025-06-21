@@ -42,6 +42,28 @@ const CheckoutPage: FC = () => {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('');
   const [currentOrderId, setCurrentOrderId] = useState<string>('');
   const [discount, setDiscount] = useState(0);
+
+  // Get affiliate parameters from URL
+  const [affiliateParams, setAffiliateParams] = useState<{
+    affiliateSlug?: string;
+    referralCode?: string;
+  }>({});
+
+  useEffect(() => {
+    // Get affiliate parameters from URL or localStorage
+    const urlParams = new URLSearchParams(window.location.search);
+    const aff = urlParams.get('aff');
+    const ref = urlParams.get('ref');
+
+    // Also check localStorage for persistent affiliate tracking
+    const storedAff = localStorage.getItem('affiliateSlug');
+    const storedRef = localStorage.getItem('referralCode');
+
+    setAffiliateParams({
+      affiliateSlug: aff || storedAff || undefined,
+      referralCode: ref || storedRef || undefined
+    });
+  }, []);
   
   // Form data
   const [formData, setFormData] = useState({
@@ -120,6 +142,9 @@ const CheckoutPage: FC = () => {
           shippingFee: shippingFee,
           finalTotal: total,
           paymentMethod: selectedPaymentMethod.toUpperCase(),
+          // Include affiliate tracking
+          affiliateSlug: affiliateParams.affiliateSlug,
+          referralCode: affiliateParams.referralCode,
         }),
       });
 

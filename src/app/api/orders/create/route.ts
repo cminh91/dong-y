@@ -20,7 +20,10 @@ const createOrderSchema = z.object({
   })),
   totalAmount: z.number().min(0),
   shippingFee: z.number().min(0),
-  paymentMethod: z.enum(['COD', 'MOMO', 'BANK_TRANSFER', 'CREDIT_CARD'])
+  paymentMethod: z.enum(['COD', 'MOMO', 'BANK_TRANSFER', 'CREDIT_CARD']),
+  // Affiliate tracking
+  affiliateSlug: z.string().optional(),
+  referralCode: z.string().optional()
 });
 
 export async function POST(request: NextRequest) {
@@ -52,6 +55,34 @@ export async function POST(request: NextRequest) {
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createOrderSchema.parse(body);
+
+    // Find affiliate link if provided
+    let affiliateLink = null;
+    let affiliateUser = null;
+    if (validatedData.affiliateSlug) {
+      affiliateLink = await prisma.affiliateLink.findUnique({
+        where: { slug: validatedData.affiliateSlug },
+        include: {
+          user: {
+            select: {
+              id: true,
+              role: true,
+              commissionRate: true,
+              referralCode: true
+            }
+          }
+        }
+      });
+
+      if (affiliateLink && affiliateLink.status === 'ACTIVE') {
+        affiliateUser = affiliateLink.user;
+        console.log('Affiliate tracking found:', {
+          linkSlug: affiliateLink.slug,
+          userId: affiliateUser.id,
+          commissionRate: affiliateUser.commissionRate
+        });
+      }
+    }
 
     // Validate that all items have valid productIds
     const productIds = validatedData.items.map(item => item.productId || item.id);
@@ -206,6 +237,86 @@ export async function POST(request: NextRequest) {
             }
           }
         });
+      }
+
+      // Create affiliate commission if applicable
+      if (affiliateLink && affiliateUser && affiliateUser.commissionRate > 0) {
+        // Get commission settings
+        const commissionSettings = await tx.systemSetting.findUnique({
+          where: { key: 'commission_first_order_only' }
+        });
+
+        const firstOrderOnly = commissionSettings?.value === true || commissionSettings?.value === 'true';
+        let isEligibleForCommission = true;
+
+        if (firstOrderOnly) {
+          // Check if this is customer's first order
+          const existingOrders = await tx.order.count({
+            where: {
+              userId: session.user.id,
+              status: {
+                in: ['CONFIRMED', 'PROCESSING', 'SHIPPING', 'DELIVERED']
+              }
+            }
+          });
+
+          isEligibleForCommission = existingOrders === 0;
+        }
+
+        if (isEligibleForCommission) {
+          const commissionAmount = calculatedTotal * (affiliateUser.commissionRate / 100);
+
+          console.log('Creating commission:', {
+            orderId: newOrder.id,
+            userId: affiliateUser.id,
+            referredUserId: session.user.id,
+            amount: commissionAmount,
+            userCommissionRate: affiliateUser.commissionRate,
+            firstOrderOnly,
+            isEligible: isEligibleForCommission
+          });
+
+          await tx.commission.create({
+            data: {
+              userId: affiliateUser.id, // Affiliate user
+              orderId: newOrder.id,
+              referredUserId: session.user.id, // User who made the order
+              level: 1, // Direct referral
+              orderAmount: calculatedTotal,
+              commissionRate: affiliateUser.commissionRate / 100, // Convert to decimal
+              amount: commissionAmount,
+              status: 'PENDING' // Will be paid when order is completed
+            }
+          });
+        } else {
+          console.log('No commission - not eligible:', {
+            customerId: session.user.id,
+            affiliateUserId: affiliateUser.id,
+            firstOrderOnly,
+            reason: firstOrderOnly ? 'Customer has previous orders' : 'Commission settings'
+          });
+        }
+
+        // Update affiliate link stats
+        await tx.affiliateLink.update({
+          where: { id: affiliateLink.id },
+          data: {
+            totalConversions: { increment: 1 },
+            totalCommission: { increment: commissionAmount },
+            lastConversionAt: new Date()
+          }
+        });
+
+        // Update user affiliate stats
+        await tx.user.update({
+          where: { id: affiliateUser.id },
+          data: {
+            totalSales: { increment: calculatedTotal },
+            totalCommission: { increment: commissionAmount }
+          }
+        });
+
+        console.log('✅ Commission created successfully');
       }
 
       return orderWithItems;

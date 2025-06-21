@@ -13,12 +13,18 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit
 
-    // Build where clause
+    // Build where clause - Affiliate users only
     const where: any = {
       OR: [
         { role: 'COLLABORATOR' },
         { role: 'AGENT' },
-        { referralCode: { not: null } }
+        // CUSTOMER with affiliate privileges (has commission rate > 0)
+        {
+          AND: [
+            { role: 'CUSTOMER' },
+            { commissionRate: { gt: 0 } }
+          ]
+        }
       ]
     }
 
@@ -52,7 +58,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           bankAccounts: {
-            where: { isPrimary: true },
+            orderBy: { createdAt: 'desc' },
             take: 1
           },
           referredUsers: {

@@ -33,8 +33,8 @@ export async function GET(request: NextRequest) {
       where.OR = [
         {
           orderNumber: {
-            contains: search,
-            mode: 'insensitive'
+            contains: search
+            // mode: 'insensitive' not supported in MySQL/MariaDB
           }
         },
         {

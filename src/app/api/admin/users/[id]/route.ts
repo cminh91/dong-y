@@ -39,10 +39,9 @@ export async function GET(
           orderBy: { createdAt: 'desc' }
         },
         bankAccounts: {
-          orderBy: [
-            { isPrimary: 'desc' },
-            { createdAt: 'desc' }
-          ]
+          orderBy: {
+            createdAt: 'desc'
+          }
         },
         _count: {
           select: {

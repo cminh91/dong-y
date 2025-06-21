@@ -213,8 +213,8 @@ export async function registerAction(formData: FormData) {
         userId: user.id,
         idCardNumber: (validatedData as RegisterValidatedData).idCardNumber!,
         frontImage: (validatedData as RegisterValidatedData).frontIdImage!,
-        backImage: (validatedData as RegisterValidatedData).backIdImage!,
-        status: 'PENDING'
+        backImage: (validatedData as RegisterValidatedData).backIdImage!
+        // Note: status field removed - using verifiedAt/rejectedAt timestamps instead
         }
       })
       }

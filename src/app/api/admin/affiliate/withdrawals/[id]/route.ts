@@ -33,7 +33,7 @@ export async function GET(
             accountNumber: true,
             accountName: true,
             branch: true,
-            isPrimary: true
+            // isPrimary field removed
           }
         }
       }

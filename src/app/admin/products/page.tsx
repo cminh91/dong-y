@@ -45,7 +45,8 @@ interface ProductsPageProps {
 // Fetch products from API
 async function fetchProducts(searchParams: any) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = new URL('/api/products', baseUrl);
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = new URL('/api/products', fullBaseUrl);
 
   // Add search params to URL
   Object.keys(searchParams).forEach(key => {
@@ -74,7 +75,8 @@ async function fetchProducts(searchParams: any) {
 // Fetch categories for filter
 async function fetchCategories() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-  const url = `${baseUrl}/api/categories?limit=100`;
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = `${fullBaseUrl}/api/categories?limit=100`;
 
   try {
     const response = await fetch(url, {

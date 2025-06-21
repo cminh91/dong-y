@@ -9,7 +9,7 @@ const bankAccountSchema = z.object({
   accountNumber: z.string().min(1, 'Số tài khoản không được để trống'),
   accountName: z.string().min(1, 'Tên chủ tài khoản không được để trống'),
   branch: z.string().min(1, 'Chi nhánh không được để trống'),
-  isPrimary: z.boolean().optional().default(false)
+  // isPrimary field removed - using single bank account per user
 });
 
 export async function GET(request: NextRequest) {
@@ -26,10 +26,9 @@ export async function GET(request: NextRequest) {
     // Get user's bank accounts
     const bankAccounts = await prisma.bankAccount.findMany({
       where: { userId: session.user.id },
-      orderBy: [
-        { isPrimary: 'desc' },
-        { createdAt: 'desc' }
-      ]
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
     // Transform data for frontend
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
       accountNumber: account.accountNumber,
       accountName: account.accountName,
       branch: account.branch,
-      isPrimary: account.isPrimary,
+      // isPrimary field removed
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString()
     }));
@@ -89,14 +88,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If this is set as primary, update other accounts
-    if (validatedData.isPrimary) {
-      await prisma.bankAccount.updateMany({
-        where: { userId: session.user.id },
-        data: { isPrimary: false }
-      });
-    }
-
     // Create new bank account
     const newBankAccount = await prisma.bankAccount.create({
       data: {
@@ -104,8 +95,7 @@ export async function POST(request: NextRequest) {
         bankName: validatedData.bankName,
         accountNumber: validatedData.accountNumber,
         accountName: validatedData.accountName,
-        branch: validatedData.branch,
-        isPrimary: validatedData.isPrimary
+        branch: validatedData.branch
       }
     });
 
@@ -117,7 +107,7 @@ export async function POST(request: NextRequest) {
         accountNumber: newBankAccount.accountNumber,
         accountName: newBankAccount.accountName,
         branch: newBankAccount.branch,
-        isPrimary: newBankAccount.isPrimary,
+        // isPrimary field removed
         createdAt: newBankAccount.createdAt.toISOString(),
         updatedAt: newBankAccount.updatedAt.toISOString()
       },
