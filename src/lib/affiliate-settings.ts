@@ -8,8 +8,8 @@ export const DEFAULT_AFFILIATE_SETTINGS = {
     defaultRate: 0.15,
     level1Rate: 0.15,
     level2Rate: 0.05,
-    minWithdrawal: 500000,
-    withdrawalFee: 50000,
+    minWithdrawal: 100000,  // Giảm từ 500k xuống 100k
+    withdrawalFee: 5000,    // Giảm từ 50k xuống 5k
     paymentSchedule: 'weekly'
   },
   registration: {

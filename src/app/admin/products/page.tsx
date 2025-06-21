@@ -27,6 +27,10 @@ interface Product {
   };
   isFeatured: boolean;
   status: string;
+  // NEW: Commission fields
+  commissionRate: number;
+  commissionRatePercent: number;
+  allowAffiliate: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,6 +156,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SKU</th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Danh mục</th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá</th>
+                    <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hoa hồng</th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tồn kho</th>
                     <th className="px-4 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
                     <th className="px-4 sm:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
@@ -194,6 +199,18 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                             {hasDiscount && (
                               <div className="text-xs text-gray-500 line-through">
                                 {product.price.toLocaleString()}₫
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div>
+                            <span className="font-medium text-green-600">
+                              {product.commissionRatePercent?.toFixed(1) || '0'}%
+                            </span>
+                            {!product.allowAffiliate && (
+                              <div className="text-xs text-red-500">
+                                Không cho phép
                               </div>
                             )}
                           </div>
@@ -272,6 +289,15 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                             </div>
                           )}
                         </div>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Hoa hồng:</span>
+                        <span className="font-medium text-green-600 ml-1">
+                          {product.commissionRatePercent?.toFixed(1) || '0'}%
+                        </span>
+                        {!product.allowAffiliate && (
+                          <div className="text-xs text-red-500">Không cho phép</div>
+                        )}
                       </div>
                       <div>
                         <span className="text-gray-500">Tồn kho:</span>

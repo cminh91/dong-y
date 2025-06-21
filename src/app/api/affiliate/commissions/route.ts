@@ -37,17 +37,41 @@ export async function GET(request: NextRequest) {
       whereClause.affiliateLinkId = linkId;
     }
 
-    // Get commissions with pagination
+    // Get commissions with pagination (NEW: Include product details)
     const [commissions, totalCount, summaryStats] = await Promise.all([
       prisma.commission.findMany({
         where: whereClause,
         include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              images: true,
+              commissionRate: true
+            }
+          },
           order: {
             select: {
               id: true,
+              orderNumber: true,
               totalAmount: true,
               status: true,
               createdAt: true
+            }
+          },
+          orderItem: {
+            select: {
+              id: true,
+              quantity: true,
+              price: true
+            }
+          },
+          affiliateLink: {
+            select: {
+              id: true,
+              title: true,
+              slug: true
             }
           },
           referredUser: {
@@ -115,15 +139,27 @@ export async function GET(request: NextRequest) {
           id: commission.id,
           amount: Number(commission.amount),
           status: commission.status,
-          type: 'REFERRAL_COMMISSION',
+          commissionType: commission.commissionType,
           level: commission.level,
           orderAmount: Number(commission.orderAmount),
           commissionRate: Number(commission.commissionRate),
+          productQuantity: commission.productQuantity,
+          productPrice: commission.productPrice ? Number(commission.productPrice) : null,
           createdAt: commission.createdAt,
-          approvedAt: commission.status === 'PAID' ? commission.paidAt : null,
           paidAt: commission.paidAt,
-          note: `Level ${commission.level} commission from referral`,
-          affiliateLink: null, // Commission model doesn't have affiliate link relation
+          // NEW: Product details
+          product: commission.product ? {
+            ...commission.product,
+            commissionRate: Number(commission.product.commissionRate),
+            images: commission.product.images ? JSON.parse(commission.product.images as string) : []
+          } : null,
+          // NEW: Order item details
+          orderItem: commission.orderItem ? {
+            ...commission.orderItem,
+            price: Number(commission.orderItem.price)
+          } : null,
+          // NEW: Affiliate link details
+          affiliateLink: commission.affiliateLink,
           order: commission.order ? {
             ...commission.order,
             totalAmount: Number(commission.order.totalAmount)

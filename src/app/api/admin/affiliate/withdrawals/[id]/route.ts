@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET /api/admin/affiliate/withdrawals/[id] - Lấy thông tin chi tiết withdrawal
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     const withdrawal = await prisma.withdrawal.findUnique({
       where: { id },
@@ -95,10 +95,10 @@ export async function GET(
 // PUT /api/admin/affiliate/withdrawals/[id] - Cập nhật withdrawal (approve/reject)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
     const body = await request.json()
     const {
       status,
@@ -230,10 +230,10 @@ export async function PUT(
 // DELETE /api/admin/affiliate/withdrawals/[id] - Xóa withdrawal (chỉ khi pending)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params
+    const { id } = await params
 
     // Check if withdrawal exists
     const existingWithdrawal = await prisma.withdrawal.findUnique({

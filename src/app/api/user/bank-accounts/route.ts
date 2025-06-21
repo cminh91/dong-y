@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       accountNumber: account.accountNumber,
       accountName: account.accountName,
       branch: account.branch,
-      // isPrimary field removed
+      isPrimary: false, // Default to false since field was removed
       createdAt: account.createdAt.toISOString(),
       updatedAt: account.updatedAt.toISOString()
     }));
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
         accountNumber: newBankAccount.accountNumber,
         accountName: newBankAccount.accountName,
         branch: newBankAccount.branch,
-        // isPrimary field removed
+        isPrimary: false, // Default to false since field was removed
         createdAt: newBankAccount.createdAt.toISOString(),
         updatedAt: newBankAccount.updatedAt.toISOString()
       },

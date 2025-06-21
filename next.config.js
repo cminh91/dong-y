@@ -16,6 +16,7 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // serverExternalPackages: ['sonner'], // Commented out to avoid conflicts
 }
 
 module.exports = nextConfig

@@ -64,6 +64,10 @@ export async function GET(
       category: product.category,
       isFeatured: product.isFeatured,
       status: product.status,
+      // NEW: Commission fields
+      commissionRate: Number(product.commissionRate),
+      commissionRatePercent: Number(product.commissionRate * 100),
+      allowAffiliate: product.allowAffiliate,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt
     };
@@ -102,7 +106,10 @@ export async function PUT(
       categoryId,
       images,
       isFeatured,
-      status
+      status,
+      // NEW: Commission fields
+      commissionRate,
+      allowAffiliate
     } = body;
 
     // Check if product exists
@@ -179,7 +186,10 @@ export async function PUT(
         ...(categoryId && { categoryId }),
         ...(images !== undefined && { images: JSON.stringify(images) }),
         ...(isFeatured !== undefined && { isFeatured }),
-        ...(status && { status })
+        ...(status && { status }),
+        // NEW: Commission fields
+        ...(commissionRate !== undefined && { commissionRate: commissionRate }),
+        ...(allowAffiliate !== undefined && { allowAffiliate })
       },
       include: {
         category: {
@@ -207,6 +217,10 @@ export async function PUT(
       category: updatedProduct.category,
       isFeatured: updatedProduct.isFeatured,
       status: updatedProduct.status,
+      // NEW: Commission fields
+      commissionRate: Number(updatedProduct.commissionRate),
+      commissionRatePercent: Number(updatedProduct.commissionRate * 100),
+      allowAffiliate: updatedProduct.allowAffiliate,
       createdAt: updatedProduct.createdAt,
       updatedAt: updatedProduct.updatedAt
     };

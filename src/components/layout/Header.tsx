@@ -3,10 +3,20 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import layoutData from '@/data/layout.json';
 import { FC } from 'react';
 import { HeaderData } from '@/types/layout';
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+interface UserData {
+  id: string;
+  fullName: string;
+  email: string;
+  role: string;
+  availableBalance?: number;
+  totalCommission?: number;
+}
 
 // Thay đổi interface HeaderProps thành:
 interface HeaderProps extends Partial<HeaderData> {
@@ -14,6 +24,7 @@ interface HeaderProps extends Partial<HeaderData> {
 }
 
 const Header: FC<HeaderProps> = (props) => {
+  const router = useRouter();
 
   const defaultProps = {
     ...layoutData.header,
@@ -21,20 +32,101 @@ const Header: FC<HeaderProps> = (props) => {
   };
 
   const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    console.log('Header mounted, fetching user data...');
+    fetchUserData();
   }, []);
 
-  const { isLoggedIn, userName, cartItemCount, productCategories, blogCategories, aboutCategories } = defaultProps;
-  const balance = 1250000; // Giả lập số dư tài khoản
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element;
+      if (!target.closest('.user-dropdown')) {
+        setShowUserDropdown(false);
+      }
+    };
+
+    if (showUserDropdown) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showUserDropdown]);
+
+  // Fetch user data from API
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch('/api/user/profile');
+      if (response.ok) {
+        const result = await response.json();
+        console.log('User profile API response:', result); // Debug log
+        if (result.success && result.profile) {
+          setUser(result.profile);
+        } else {
+          setUser(null);
+        }
+      } else {
+        console.log('Profile API failed:', response.status);
+        setUser(null);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        setUser(null);
+        router.push('/');
+        // Refresh page to update cart and other states
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
+  const { cartItemCount, productCategories, blogCategories, aboutCategories } = defaultProps;
+  const isLoggedIn = !!user;
+  const userName = user?.fullName || '';
+  const balance = user?.availableBalance || 0;
 
   const handleSearch = (term: string) => {
     console.log('Tìm kiếm:', term);
   };
 
   return (
-    <header className="bg-white shadow-md">
+    <>
+      <style jsx>{`
+        .user-dropdown:hover .dropdown-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
+        }
+        .dropdown-menu {
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(-10px);
+          transition: all 0.2s ease-in-out;
+        }
+      `}</style>
+      <header className="bg-white shadow-md">
       {/* Top bar */}
       <div className="bg-green-50 py-2 hidden lg:block">
         <div className="container mx-auto px-4 flex justify-between items-center text-sm">
@@ -44,22 +136,90 @@ const Header: FC<HeaderProps> = (props) => {
           </div>
           <div className="flex items-center space-x-4">
             {mounted ? (
-              isLoggedIn ? (
+              loading ? (
+                <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
+              ) : isLoggedIn ? (
                 <>
-                  <span className="text-green-600 font-medium">
-                    Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
-                  </span>
-                  <Link href="/tai-khoan" className="flex items-center space-x-2 hover:text-green-600">
-                    <i className="fas fa-user-circle text-2xl text-green-600"></i>
-                    <span>{userName}</span>
-                  </Link>
+                  {/* Hiển thị số dư cho affiliate */}
+                  {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                    <span className="text-green-600 font-medium">
+                      Số dư: {balance.toLocaleString('vi-VN')}₫
+                    </span>
+                  )}
 
+                  {/* User dropdown */}
+                  <div className="relative user-dropdown">
+                    <button
+                      onClick={() => setShowUserDropdown(!showUserDropdown)}
+                      className="flex items-center space-x-2 hover:text-green-600 py-2 px-3 rounded-lg transition-colors"
+                    >
+                      <i className="fas fa-user-circle text-2xl text-green-600"></i>
+                      <span>{userName}</span>
+                      <i className={`fas fa-chevron-down text-xs transition-transform ${showUserDropdown ? 'rotate-180' : ''}`}></i>
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {showUserDropdown && (
+                      <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-lg shadow-xl border py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{userName}</p>
+                        <p className="text-xs text-gray-500">{user?.email}</p>
+                      </div>
+
+                      <Link href="/tai-khoan" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i className="fas fa-user mr-3 w-4 text-center"></i>
+                        Tài khoản của tôi
+                      </Link>
+
+                      <Link href="/tai-khoan/don-hang" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                        <i className="fas fa-shopping-bag mr-3 w-4 text-center"></i>
+                        Đơn hàng của tôi
+                      </Link>
+
+                      {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                        <>
+                          <Link href="/tai-khoan/affiliate" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i className="fas fa-chart-line mr-3 w-4 text-center"></i>
+                            Affiliate Dashboard
+                          </Link>
+                          <Link href="/tai-khoan/affiliate/withdrawals" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i className="fas fa-money-bill-wave mr-3 w-4 text-center"></i>
+                            Rút tiền
+                          </Link>
+                        </>
+                      )}
+
+                      {user?.role === 'ADMIN' && (
+                        <Link href="/admin" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                          <i className="fas fa-cog mr-3 w-4 text-center"></i>
+                          Quản trị hệ thống
+                        </Link>
+                      )}
+
+                      <hr className="my-2 border-gray-100" />
+
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <i className="fas fa-sign-out-alt mr-3 w-4 text-center"></i>
+                        Đăng xuất
+                      </button>
+                      </div>
+                    )}
+                  </div>
                 </>
               ) : (
                 <>
-                  <Link href="/dang-nhap" className="hover:text-green-600">Đăng nhập</Link>
-                  <span>|</span>
-                  <Link href="/dang-ky" className="hover:text-green-600">Đăng ký</Link>
+                  <Link href="/dang-nhap" className="hover:text-green-600 transition-colors">
+                    <i className="fas fa-sign-in-alt mr-1"></i>
+                    Đăng nhập
+                  </Link>
+                  <span className="text-gray-300">|</span>
+                  <Link href="/dang-ky" className="hover:text-green-600 transition-colors">
+                    <i className="fas fa-user-plus mr-1"></i>
+                    Đăng ký
+                  </Link>
                 </>
               )
             ) : (
@@ -85,15 +245,20 @@ const Header: FC<HeaderProps> = (props) => {
                 <SheetContent side="left" className="p-0 w-[280px]">
                   <div className="h-full flex flex-col">
                     {/* Hiển thị thông tin người dùng và số dư nếu đã đăng nhập */}
-                    {mounted && isLoggedIn && (
+                    {mounted && !loading && isLoggedIn && (
                       <div className="px-4 py-3 bg-green-50 border-b">
-                        <div className="flex items-center space-x-2">
-                          <i className="fas fa-user text-2xl text-green-600"></i>
-                          <div>
-                            <div className="font-medium">{userName}</div>
-                            <div className="text-green-600 text-sm font-medium">
-                              Số dư: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance)}
-                            </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                            <i className="fas fa-user text-white"></i>
+                          </div>
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900">{userName}</div>
+                            <div className="text-xs text-gray-500">{user?.email}</div>
+                            {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                              <div className="text-green-600 text-sm font-medium">
+                                Số dư: {balance.toLocaleString('vi-VN')}₫
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -120,12 +285,42 @@ const Header: FC<HeaderProps> = (props) => {
                         <li><Link href="/gioi-thieu" className="block px-4 py-2 hover:bg-gray-50">Giới thiệu</Link></li>
                         <li><Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link></li>
                         <li><Link href="/lien-he" className="block px-4 py-2 hover:bg-gray-50">Liên hệ</Link></li>
-                        {mounted && isLoggedIn ? (
-                          <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">Tài khoản</Link></li>
+
+                        {mounted && !loading && isLoggedIn ? (
+                          <>
+                            <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">
+                              <i className="fas fa-user mr-2"></i>Tài khoản
+                            </Link></li>
+                            <li><Link href="/tai-khoan/don-hang" className="block px-4 py-2 hover:bg-gray-50">
+                              <i className="fas fa-shopping-bag mr-2"></i>Đơn hàng
+                            </Link></li>
+                            {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                              <li><Link href="/tai-khoan/affiliate" className="block px-4 py-2 hover:bg-gray-50">
+                                <i className="fas fa-chart-line mr-2"></i>Affiliate
+                              </Link></li>
+                            )}
+                            {user?.role === 'ADMIN' && (
+                              <li><Link href="/admin" className="block px-4 py-2 hover:bg-gray-50">
+                                <i className="fas fa-cog mr-2"></i>Quản trị
+                              </Link></li>
+                            )}
+                            <li>
+                              <button
+                                onClick={handleLogout}
+                                className="block w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600"
+                              >
+                                <i className="fas fa-sign-out-alt mr-2"></i>Đăng xuất
+                              </button>
+                            </li>
+                          </>
                         ) : (
                           <>
-                            <li><Link href="/dang-nhap" className="block px-4 py-2 hover:bg-gray-50">Đăng nhập</Link></li>
-                            <li><Link href="/dang-ky" className="block px-4 py-2 hover:bg-gray-50">Đăng ký</Link></li>
+                            <li><Link href="/dang-nhap" className="block px-4 py-2 hover:bg-gray-50">
+                              <i className="fas fa-sign-in-alt mr-2"></i>Đăng nhập
+                            </Link></li>
+                            <li><Link href="/dang-ky" className="block px-4 py-2 hover:bg-gray-50">
+                              <i className="fas fa-user-plus mr-2"></i>Đăng ký
+                            </Link></li>
                           </>
                         )}
                       </ul>
@@ -180,10 +375,13 @@ const Header: FC<HeaderProps> = (props) => {
           {/* Cart & Balance */}
           <div className="flex items-center space-x-4">
             {/* Hiển thị icon người dùng trên mobile */}
-            {mounted && isLoggedIn && (
+            {mounted && !loading && isLoggedIn && (
               <div className="lg:hidden">
-                <Link href="/tai-khoan" className="block p-2">
+                <Link href="/tai-khoan" className="block p-2 relative">
                   <i className="fas fa-user text-xl text-green-600"></i>
+                  {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                    <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full"></span>
+                  )}
                 </Link>
               </div>
             )}
@@ -282,6 +480,7 @@ const Header: FC<HeaderProps> = (props) => {
         </ul>
       </nav>
     </header>
+    </>
   );
 };
 

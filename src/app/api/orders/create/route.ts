@@ -3,6 +3,90 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+// Multi-level commission helper function
+async function createMultiLevelCommissions(tx: any, params: {
+  affiliateUserId: string;
+  orderId: string;
+  orderItemId: string;
+  productId: string;
+  referredUserId: string;
+  itemTotal: any;
+  baseCommissionAmount: any;
+}) {
+  const { affiliateUserId, orderId, orderItemId, productId, referredUserId, itemTotal, baseCommissionAmount } = params;
+
+  // Get commission level settings
+  const levelSettings = await tx.commissionLevelSetting.findMany({
+    where: { isActive: true },
+    orderBy: { level: 'asc' }
+  });
+
+  if (levelSettings.length === 0) return;
+
+  // Find upline users
+  let currentUserId = affiliateUserId;
+  let level = 1;
+
+  for (const levelSetting of levelSettings) {
+    // Find the user who referred current user
+    const uplineUser = await tx.user.findFirst({
+      where: {
+        referredUsers: {
+          some: { id: currentUserId }
+        }
+      },
+      select: {
+        id: true,
+        fullName: true,
+        affiliateLevel: true
+      }
+    });
+
+    if (!uplineUser) break; // No more upline
+
+    // Calculate level commission (percentage of base commission)
+    const levelCommissionAmount = baseCommissionAmount * levelSetting.commissionRate;
+
+    console.log('Creating level commission:', {
+      level: levelSetting.level,
+      uplineUser: uplineUser.fullName,
+      uplineUserId: uplineUser.id,
+      levelRate: Number(levelSetting.commissionRate),
+      baseCommission: Number(baseCommissionAmount),
+      levelCommission: Number(levelCommissionAmount)
+    });
+
+    // Create level commission
+    await tx.commission.create({
+      data: {
+        userId: uplineUser.id,
+        orderId: orderId,
+        orderItemId: orderItemId,
+        productId: productId,
+        referredUserId: referredUserId,
+        level: levelSetting.level + 1, // Level 2, 3, etc.
+        commissionType: 'LEVEL',
+        orderAmount: itemTotal,
+        commissionRate: levelSetting.commissionRate,
+        amount: levelCommissionAmount,
+        status: 'PENDING'
+      }
+    });
+
+    // Update upline user stats
+    await tx.user.update({
+      where: { id: uplineUser.id },
+      data: {
+        totalCommission: { increment: levelCommissionAmount }
+      }
+    });
+
+    // Move to next level
+    currentUserId = uplineUser.id;
+    level++;
+  }
+}
+
 // Validation schema
 const createOrderSchema = z.object({
   fullName: z.string().min(1, 'Họ tên không được để trống'),
@@ -56,6 +140,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createOrderSchema.parse(body);
 
+    // DEBUG: Log affiliate tracking data
+    console.log('=== AFFILIATE TRACKING DEBUG ===');
+    console.log('Request body affiliateSlug:', body.affiliateSlug);
+    console.log('Validated affiliateSlug:', validatedData.affiliateSlug);
+    console.log('Request body referralCode:', body.referralCode);
+
     // Find affiliate link if provided
     let affiliateLink = null;
     let affiliateUser = null;
@@ -76,12 +166,16 @@ export async function POST(request: NextRequest) {
 
       if (affiliateLink && affiliateLink.status === 'ACTIVE') {
         affiliateUser = affiliateLink.user;
-        console.log('Affiliate tracking found:', {
+        console.log('✅ Affiliate tracking found:', {
           linkSlug: affiliateLink.slug,
           userId: affiliateUser.id,
           commissionRate: affiliateUser.commissionRate
         });
+      } else {
+        console.log('❌ Affiliate link not found or inactive:', validatedData.affiliateSlug);
       }
+    } else {
+      console.log('❌ No affiliateSlug provided in request');
     }
 
     // Validate that all items have valid productIds
@@ -239,8 +333,8 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Create affiliate commission if applicable
-      if (affiliateLink && affiliateUser && affiliateUser.commissionRate > 0) {
+      // Create affiliate commission if applicable (NEW: Per product commission)
+      if (affiliateLink && affiliateUser) {
         // Get commission settings
         const commissionSettings = await tx.systemSetting.findUnique({
           where: { key: 'commission_first_order_only' }
@@ -264,30 +358,94 @@ export async function POST(request: NextRequest) {
         }
 
         if (isEligibleForCommission) {
-          const commissionAmount = calculatedTotal * (affiliateUser.commissionRate / 100);
+          console.log('Processing commissions for order items...');
+          let totalCommissionAmount = 0;
 
-          console.log('Creating commission:', {
-            orderId: newOrder.id,
-            userId: affiliateUser.id,
-            referredUserId: session.user.id,
-            amount: commissionAmount,
-            userCommissionRate: affiliateUser.commissionRate,
-            firstOrderOnly,
-            isEligible: isEligibleForCommission
-          });
+          // Process commission for each order item that matches affiliate product
+          for (const orderItem of orderWithItems.orderItems) {
+            // Only create commission if this order item is for the affiliate product
+            if (orderItem.productId === affiliateLink.productId) {
+              // Get product commission rate
+              const product = await tx.product.findUnique({
+                where: { id: orderItem.productId },
+                select: {
+                  commissionRate: true,
+                  allowAffiliate: true,
+                  name: true
+                }
+              });
 
-          await tx.commission.create({
-            data: {
-              userId: affiliateUser.id, // Affiliate user
-              orderId: newOrder.id,
-              referredUserId: session.user.id, // User who made the order
-              level: 1, // Direct referral
-              orderAmount: calculatedTotal,
-              commissionRate: affiliateUser.commissionRate / 100, // Convert to decimal
-              amount: commissionAmount,
-              status: 'PENDING' // Will be paid when order is completed
+              if (product && product.allowAffiliate && product.commissionRate > 0) {
+                const itemTotal = orderItem.price * orderItem.quantity;
+                const commissionAmount = itemTotal * product.commissionRate;
+                totalCommissionAmount += commissionAmount;
+
+                console.log('Creating product commission:', {
+                  productName: product.name,
+                  productId: orderItem.productId,
+                  quantity: orderItem.quantity,
+                  price: Number(orderItem.price),
+                  itemTotal: Number(itemTotal),
+                  commissionRate: Number(product.commissionRate),
+                  commissionAmount: Number(commissionAmount)
+                });
+
+                // Create direct commission
+                await tx.commission.create({
+                  data: {
+                    userId: affiliateUser.id,
+                    orderId: newOrder.id,
+                    orderItemId: orderItem.id,
+                    productId: orderItem.productId,
+                    affiliateLinkId: affiliateLink.id,
+                    referredUserId: session.user.id,
+                    level: 1,
+                    commissionType: 'DIRECT',
+                    productQuantity: orderItem.quantity,
+                    productPrice: orderItem.price,
+                    orderAmount: itemTotal,
+                    commissionRate: product.commissionRate,
+                    amount: commissionAmount,
+                    status: 'PENDING'
+                  }
+                });
+
+                // Create multi-level commissions for upline
+                await createMultiLevelCommissions(tx, {
+                  affiliateUserId: affiliateUser.id,
+                  orderId: newOrder.id,
+                  orderItemId: orderItem.id,
+                  productId: orderItem.productId,
+                  referredUserId: session.user.id,
+                  itemTotal: itemTotal,
+                  baseCommissionAmount: commissionAmount
+                });
+              }
             }
-          });
+          }
+
+          if (totalCommissionAmount > 0) {
+            // Update affiliate link stats
+            await tx.affiliateLink.update({
+              where: { id: affiliateLink.id },
+              data: {
+                totalConversions: { increment: 1 },
+                totalCommission: { increment: totalCommissionAmount },
+                lastConversionAt: new Date()
+              }
+            });
+
+            // Update user affiliate stats
+            await tx.user.update({
+              where: { id: affiliateUser.id },
+              data: {
+                totalSales: { increment: totalCommissionAmount },
+                totalCommission: { increment: totalCommissionAmount }
+              }
+            });
+
+            console.log('✅ Product commissions created successfully. Total:', Number(totalCommissionAmount));
+          }
         } else {
           console.log('No commission - not eligible:', {
             customerId: session.user.id,
@@ -296,27 +454,6 @@ export async function POST(request: NextRequest) {
             reason: firstOrderOnly ? 'Customer has previous orders' : 'Commission settings'
           });
         }
-
-        // Update affiliate link stats
-        await tx.affiliateLink.update({
-          where: { id: affiliateLink.id },
-          data: {
-            totalConversions: { increment: 1 },
-            totalCommission: { increment: commissionAmount },
-            lastConversionAt: new Date()
-          }
-        });
-
-        // Update user affiliate stats
-        await tx.user.update({
-          where: { id: affiliateUser.id },
-          data: {
-            totalSales: { increment: calculatedTotal },
-            totalCommission: { increment: commissionAmount }
-          }
-        });
-
-        console.log('✅ Commission created successfully');
       }
 
       return orderWithItems;

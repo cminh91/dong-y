@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Toaster } from "sonner";
+import { Toaster } from "react-hot-toast";
 import ClientLayoutWrapper from "@/components/ClientLayoutWrapper";
 import { CartProvider } from "@/context/cart-context";
 
@@ -34,7 +34,7 @@ export default function RootLayout({
             {children}
           </ClientLayoutWrapper>
         </CartProvider>
-        <Toaster position="top-right" richColors />
+        <Toaster position="top-right" />
       </body>
     </html>
   );

@@ -1,10 +1,114 @@
 'use client';
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 
+interface Order {
+  id: string;
+  orderNumber: string;
+  user: {
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  };
+  status: string;
+  paymentStatus: string;
+  paymentMethod: string;
+  totalAmount: number;
+  finalAmount: number;
+  createdAt: string;
+  itemCount: number;
+  totalQuantity: number;
+}
+
 const OrdersPage: FC = () => {
-  // Mock data for orders list
-  const orders = [
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [filters, setFilters] = useState({
+    search: '',
+    status: '',
+    paymentStatus: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    processing: 0,
+    delivered: 0,
+    cancelled: 0,
+    totalRevenue: 0
+  });
+
+  // Fetch orders from API
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '20',
+        ...(filters.search && { search: filters.search }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.startDate && { startDate: filters.startDate }),
+        ...(filters.endDate && { endDate: filters.endDate })
+      });
+
+      const response = await fetch(`/api/admin/orders?${params}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setOrders(result.data.orders);
+        setTotalPages(result.data.pagination.pages);
+      } else {
+        console.error('Failed to fetch orders:', result.error);
+      }
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [currentPage, filters]);
+
+  // Handle status update
+  const handleStatusUpdate = async (orderId: string, status: string) => {
+    try {
+      const response = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status })
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        // Refresh orders list
+        fetchOrders();
+        alert('Cập nhật trạng thái thành công!');
+      } else {
+        alert('Lỗi: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      alert('Có lỗi xảy ra khi cập nhật trạng thái');
+    }
+  };
+
+  // Handle filter change
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+    setCurrentPage(1); // Reset to first page when filtering
+  };
+
+  // Mock data for fallback (keeping original structure)
+  const mockOrders = [
     {
       id: 'ORD-001',
       customer: 'Nguyễn Văn A',
@@ -76,39 +180,62 @@ const OrdersPage: FC = () => {
 
       {/* Filter and Search */}
       <div className="bg-white rounded-lg shadow p-4 sm:p-6 mb-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Tìm kiếm</label>
             <input
               type="text"
               placeholder="Mã đơn hoặc tên khách hàng..."
+              value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
+            <select
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
               <option value="">Tất cả trạng thái</option>
-              <option value="dang-xu-ly">Đang xử lý</option>
-              <option value="dang-giao">Đang giao</option>
-              <option value="da-giao">Đã giao</option>
-              <option value="da-huy">Đã hủy</option>
+              <option value="PENDING">Chờ xử lý</option>
+              <option value="CONFIRMED">Đã xác nhận</option>
+              <option value="PROCESSING">Đang xử lý</option>
+              <option value="SHIPPING">Đang giao</option>
+              <option value="DELIVERED">Đã giao</option>
+              <option value="CANCELLED">Đã hủy</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Phương thức thanh toán</label>
-            <select className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm">
-              <option value="">Tất cả phương thức</option>
-              <option value="cod">COD</option>
-              <option value="chuyen-khoan">Chuyển khoản</option>
-              <option value="vi-dien-tu">Ví điện tử</option>
-              <option value="the-tin-dung">Thẻ tín dụng</option>
+            <select
+              value={filters.paymentStatus}
+              onChange={(e) => handleFilterChange('paymentStatus', e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="PENDING">Chờ thanh toán</option>
+              <option value="PAID">Đã thanh toán</option>
+              <option value="FAILED">Thanh toán thất bại</option>
+              <option value="REFUNDED">Đã hoàn tiền</option>
             </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Từ ngày</label>
             <input
               type="date"
+              value={filters.startDate}
+              onChange={(e) => handleFilterChange('startDate', e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Đến ngày</label>
+            <input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => handleFilterChange('endDate', e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
             />
           </div>
@@ -137,113 +264,176 @@ const OrdersPage: FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {orders.map((order) => (
-                <tr key={order.id}>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                    <Link href={`/admin/orders/${order.id}`}>{order.id}</Link>
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{order.customer}</div>
-                    <div className="text-sm text-gray-500">{order.email}</div>
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.date}</td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.total.toLocaleString()}₫</td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.paymentMethod}</td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                      {order.status}
-                    </span>
-                  </td>
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link href={`/admin/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
-                      <i className="fas fa-eye"></i>
-                    </Link>
-                    <button className="text-red-600 hover:text-red-900">
-                      <i className="fas fa-trash"></i>
-                    </button>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    Đang tải dữ liệu...
                   </td>
                 </tr>
-              ))}
+              ) : orders.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    Không có đơn hàng nào
+                  </td>
+                </tr>
+              ) : (
+                orders.map((order) => (
+                  <tr key={order.id}>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                      <Link href={`/admin/orders/${order.id}`}>{order.orderNumber || order.id}</Link>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{order.user?.fullName || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{order.user?.email || 'N/A'}</div>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {(order.finalAmount || 0).toLocaleString('vi-VN')}₫
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {order.paymentMethod || 'N/A'}
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
+                      <select
+                        value={order.status}
+                        onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                        className={`px-2 py-1 text-xs font-semibold rounded-full border-0 ${getStatusColor(order.status)}`}
+                      >
+                        <option value="PENDING">Chờ xử lý</option>
+                        <option value="CONFIRMED">Đã xác nhận</option>
+                        <option value="PROCESSING">Đang xử lý</option>
+                        <option value="SHIPPING">Đang giao</option>
+                        <option value="DELIVERED">Đã giao</option>
+                        <option value="CANCELLED">Đã hủy</option>
+                      </select>
+                    </td>
+                    <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <Link href={`/admin/orders/${order.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
+                        <i className="fas fa-eye"></i>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          if (confirm('Bạn có chắc muốn xóa đơn hàng này?')) {
+                            // TODO: Implement delete
+                          }
+                        }}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
         {/* Card layout for smaller screens */}
         <div className="md:hidden divide-y divide-gray-200">
-          {orders.map((order) => (
-            <div key={order.id} className="p-4">
-              <div className="mb-2">
-                <div className="text-sm font-medium text-blue-600">
-                  <Link href={`/admin/orders/${order.id}`}>{order.id}</Link>
-                </div>
-                <div className="text-sm font-medium text-gray-900">{order.customer}</div>
-                <div className="text-xs text-gray-500">{order.email}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <span className="text-gray-500">Ngày đặt:</span> {order.date}
-                </div>
-                <div>
-                  <span className="text-gray-500">Tổng tiền:</span> {order.total.toLocaleString()}₫
-                </div>
-                <div>
-                  <span className="text-gray-500">Thanh toán:</span> {order.paymentMethod}
-                </div>
-                <div>
-                  <span className="text-gray-500">Số món:</span> {order.items}
-                </div>
-                <div className="col-span-2">
-                  <span className="text-gray-500">Trạng thái:</span>
-                  <span className={`ml-1 px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(order.status)}`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-              <div className="flex justify-end space-x-4 mt-4">
-                <Link href={`/admin/orders/${order.id}`} className="text-blue-600 hover:text-blue-900">
-                  <i className="fas fa-eye"></i>
-                </Link>
-                <button className="text-red-600 hover:text-red-900">
-                  <i className="fas fa-trash"></i>
-                </button>
-              </div>
+          {loading ? (
+            <div className="p-4 text-center text-gray-500">
+              Đang tải dữ liệu...
             </div>
-          ))}
+          ) : orders.length === 0 ? (
+            <div className="p-4 text-center text-gray-500">
+              Không có đơn hàng nào
+            </div>
+          ) : (
+            orders.map((order) => (
+              <div key={order.id} className="p-4">
+                <div className="mb-2">
+                  <div className="text-sm font-medium text-blue-600">
+                    <Link href={`/admin/orders/${order.id}`}>{order.orderNumber || order.id}</Link>
+                  </div>
+                  <div className="text-sm font-medium text-gray-900">{order.user?.fullName || 'N/A'}</div>
+                  <div className="text-xs text-gray-500">{order.user?.email || 'N/A'}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-500">Ngày đặt:</span> {order.createdAt ? new Date(order.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Tổng tiền:</span> {(order.finalAmount || 0).toLocaleString('vi-VN')}₫
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Thanh toán:</span> {order.paymentMethod || 'N/A'}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Số món:</span> {order.itemCount || 0}
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-gray-500">Trạng thái:</span>
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleStatusUpdate(order.id, e.target.value)}
+                      className={`ml-1 px-2 py-1 text-xs font-semibold rounded-full border-0 ${getStatusColor(order.status)}`}
+                    >
+                      <option value="PENDING">Chờ xử lý</option>
+                      <option value="CONFIRMED">Đã xác nhận</option>
+                      <option value="PROCESSING">Đang xử lý</option>
+                      <option value="SHIPPING">Đang giao</option>
+                      <option value="DELIVERED">Đã giao</option>
+                      <option value="CANCELLED">Đã hủy</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-4 mt-4">
+                  <Link href={`/admin/orders/${order.id}`} className="text-blue-600 hover:text-blue-900">
+                    <i className="fas fa-eye"></i>
+                  </Link>
+                  <button
+                    onClick={() => {
+                      if (confirm('Bạn có chắc muốn xóa đơn hàng này?')) {
+                        // TODO: Implement delete
+                      }
+                    }}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <i className="fas fa-trash"></i>
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* Pagination */}
-        <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
-          <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <div className="text-sm text-gray-700">
-              Hiển thị <span className="font-medium">1</span> đến <span className="font-medium">5</span> của{' '}
-              <span className="font-medium">5</span> đơn hàng
-            </div>
-            <div>
-              <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                <a
-                  href="#"
-                  className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                >
-                  <span className="sr-only">Previous</span>
-                  <i className="fas fa-chevron-left"></i>
-                </a>
-                <a
-                  href="#"
-                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  1
-                </a>
-                <a
-                  href="#"
-                  className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
-                >
-                  <span className="sr-only">Next</span>
-                  <i className="fas fa-chevron-right"></i>
-                </a>
-              </nav>
+        {totalPages > 1 && (
+          <div className="bg-white px-4 py-3 border-t border-gray-200 sm:px-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="text-sm text-gray-700">
+                Trang <span className="font-medium">{currentPage}</span> trong tổng số{' '}
+                <span className="font-medium">{totalPages}</span> trang
+              </div>
+              <div>
+                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <i className="fas fa-chevron-left"></i>
+                  </button>
+                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                    {currentPage}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <span className="sr-only">Next</span>
+                    <i className="fas fa-chevron-right"></i>
+                  </button>
+                </nav>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
@@ -252,13 +442,17 @@ const OrdersPage: FC = () => {
 // Helper function to determine status color
 const getStatusColor = (status: string): string => {
   switch (status) {
-    case 'Đã giao':
+    case 'DELIVERED':
       return 'bg-green-100 text-green-800';
-    case 'Đang giao':
+    case 'SHIPPING':
       return 'bg-blue-100 text-blue-800';
-    case 'Đang xử lý':
+    case 'PROCESSING':
       return 'bg-yellow-100 text-yellow-800';
-    case 'Đã hủy':
+    case 'CONFIRMED':
+      return 'bg-indigo-100 text-indigo-800';
+    case 'PENDING':
+      return 'bg-gray-100 text-gray-800';
+    case 'CANCELLED':
       return 'bg-red-100 text-red-800';
     default:
       return 'bg-gray-100 text-gray-800';

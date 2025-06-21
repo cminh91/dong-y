@@ -61,8 +61,9 @@ interface BankAccount {
   id: string
   bankName: string
   accountNumber: string
-  accountHolder: string
-  isVerified: boolean
+  accountName: string
+  accountHolder?: string
+  branch: string
 }
 
 export function AffiliateWithdrawals() {
@@ -111,11 +112,15 @@ export function AffiliateWithdrawals() {
 
   const fetchBankAccounts = async () => {
     try {
-      const response = await fetch('/api/affiliate/settings')
+      const response = await fetch('/api/user/bank-accounts')
       const result = await response.json()
-      
+
+      console.log('Bank accounts API response:', result)
+
       if (result.success) {
-        setBankAccounts(result.data.bankAccounts || [])
+        setBankAccounts(result.bankAccounts || [])
+      } else {
+        console.error('Failed to fetch bank accounts:', result.error)
       }
     } catch (error) {
       console.error('Error fetching bank accounts:', error)
@@ -124,7 +129,7 @@ export function AffiliateWithdrawals() {
 
   const createWithdrawal = async () => {
     const amount = parseFloat(withdrawalForm.amount)
-    
+
     if (!amount || amount <= 0) {
       toast.error('Vui lòng nhập số tiền hợp lệ')
       return
@@ -291,24 +296,24 @@ export function AffiliateWithdrawals() {
 
               <div className="space-y-2">
                 <Label>Tài khoản ngân hàng</Label>
-                <Select 
-                  value={withdrawalForm.bankAccountId} 
+                <Select
+                  value={withdrawalForm.bankAccountId}
                   onValueChange={(value) => setWithdrawalForm(prev => ({ ...prev, bankAccountId: value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Chọn tài khoản ngân hàng" />
                   </SelectTrigger>
                   <SelectContent>
-                    {bankAccounts.filter(acc => acc.isVerified).map((account) => (
+                    {bankAccounts.map((account) => (
                       <SelectItem key={account.id} value={account.id}>
-                        {account.bankName} - {account.accountNumber.slice(-4).padStart(account.accountNumber.length, '*')}
+                        {account.bankName} - {account.accountNumber} ({account.accountName})
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {bankAccounts.filter(acc => acc.isVerified).length === 0 && (
+                {bankAccounts.length === 0 && (
                   <p className="text-sm text-red-600">
-                    Bạn chưa có tài khoản ngân hàng đã xác thực. Vui lòng thêm tài khoản trong phần Cài đặt.
+                    Bạn chưa có tài khoản ngân hàng. Vui lòng thêm tài khoản trong phần Cài đặt.
                   </p>
                 )}
               </div>
@@ -324,7 +329,7 @@ export function AffiliateWithdrawals() {
               </div>
 
               <div className="flex space-x-2">
-                <Button 
+                <Button
                   onClick={createWithdrawal}
                   disabled={!withdrawalForm.amount || !withdrawalForm.bankAccountId || withdrawalAmount < 100000}
                 >

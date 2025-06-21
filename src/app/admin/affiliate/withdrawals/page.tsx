@@ -162,7 +162,7 @@ export default function WithdrawalApprovalPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          status: approvalAction === 'approve' ? 'PROCESSING' : 'REJECTED',
+          status: approvalAction === 'approve' ? 'COMPLETED' : 'REJECTED',
           adminNote: approvalNotes
         })
       })
@@ -171,12 +171,17 @@ export default function WithdrawalApprovalPage() {
 
       if (data.success) {
         // Refresh withdrawals list
-        fetchWithdrawals()
-        fetchStats()
+        await fetchWithdrawals()
+        await fetchStats()
         setShowApprovalDialog(false)
         setSelectedWithdrawal(null)
+        setApprovalNotes('')
+
+        // Show success message
+        alert(`${approvalAction === 'approve' ? 'Duyệt' : 'Từ chối'} yêu cầu rút tiền thành công!`)
       } else {
         console.error('Failed to process withdrawal:', data.error)
+        alert('Lỗi: ' + data.error)
       }
     } catch (error) {
       console.error('Error processing withdrawal:', error)
@@ -374,23 +379,40 @@ export default function WithdrawalApprovalPage() {
                       </Button>
                       {withdrawal.status === 'PENDING' && (
                         <>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleApprovalAction(withdrawal, 'approve')}
                             className="text-green-600 hover:text-green-700"
+                            title="Duyệt yêu cầu"
                           >
                             <Check className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            size="sm" 
+                          <Button
+                            size="sm"
                             variant="outline"
                             onClick={() => handleApprovalAction(withdrawal, 'reject')}
                             className="text-red-600 hover:text-red-700"
+                            title="Từ chối yêu cầu"
                           >
                             <X className="h-4 w-4" />
                           </Button>
                         </>
+                      )}
+                      {withdrawal.status === 'PROCESSING' && (
+                        <span className="text-sm text-blue-600 font-medium">
+                          Đang xử lý
+                        </span>
+                      )}
+                      {withdrawal.status === 'COMPLETED' && (
+                        <span className="text-sm text-green-600 font-medium">
+                          Đã hoàn thành
+                        </span>
+                      )}
+                      {withdrawal.status === 'REJECTED' && (
+                        <span className="text-sm text-red-600 font-medium">
+                          Đã từ chối
+                        </span>
                       )}
                       <Button size="sm" variant="outline">
                         <MoreHorizontal className="h-4 w-4" />

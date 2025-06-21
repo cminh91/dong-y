@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface Commission {
   id: string
   level: number
+  commissionType: 'DIRECT' | 'LEVEL'
   orderAmount: number
   commissionRate: number
   amount: number
@@ -20,11 +21,30 @@ interface Commission {
   paidAt: string | null
   createdAt: string
   updatedAt: string
+  // NEW: Product fields
+  productQuantity?: number
+  productPrice?: number
+  product?: {
+    id: string
+    name: string
+    slug: string
+    images: string[]
+    commissionRate: number
+  } | null
+  orderItem?: {
+    id: string
+    quantity: number
+    price: number
+  } | null
+  affiliateLink?: {
+    id: string
+    title: string
+    slug: string
+  } | null
   user: {
     id: string
     fullName: string
     email: string
-    referralCode: string
     affiliateLevel: number
   }
   order: {
@@ -47,6 +67,8 @@ export default function CommissionManagementPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [levelFilter, setLevelFilter] = useState('all')
+  const [commissionTypeFilter, setCommissionTypeFilter] = useState('all') // NEW
+  const [productFilter, setProductFilter] = useState('all') // NEW
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [stats, setStats] = useState<any>(null)
@@ -54,7 +76,7 @@ export default function CommissionManagementPage() {
   useEffect(() => {
     fetchCommissions()
     fetchStats()
-  }, [searchTerm, statusFilter, levelFilter, currentPage])
+  }, [searchTerm, statusFilter, levelFilter, commissionTypeFilter, productFilter, currentPage])
 
   const fetchCommissions = async () => {
     try {
@@ -62,18 +84,22 @@ export default function CommissionManagementPage() {
 
       const params = new URLSearchParams({
         page: currentPage.toString(),
-        limit: '10',
-        search: searchTerm,
-        status: statusFilter,
-        level: levelFilter
+        limit: '10'
       })
 
-      const response = await fetch(`/api/admin/affiliate/commissions?${params}`)
+      if (searchTerm) params.append('search', searchTerm)
+      if (statusFilter !== 'all') params.append('status', statusFilter)
+      if (levelFilter !== 'all') params.append('level', levelFilter)
+      if (commissionTypeFilter !== 'all') params.append('commissionType', commissionTypeFilter)
+      if (productFilter !== 'all') params.append('productId', productFilter)
+
+      const response = await fetch(`/api/admin/commissions?${params}`)
       const data = await response.json()
 
       if (data.success) {
         setCommissions(data.data.commissions)
         setTotalPages(data.data.pagination.totalPages)
+        setStats(data.data.stats) // NEW: Set stats from API response
       } else {
         throw new Error(data.error || 'Failed to fetch commissions')
       }
@@ -148,14 +174,26 @@ export default function CommissionManagementPage() {
     return <Badge variant="outline">Cấp {level}</Badge>
   }
 
+  const getCommissionTypeBadge = (type: string) => {
+    switch (type) {
+      case 'DIRECT':
+        return <Badge className="bg-blue-100 text-blue-800">Trực tiếp</Badge>
+      case 'LEVEL':
+        return <Badge className="bg-purple-100 text-purple-800">Cấp bậc</Badge>
+      default:
+        return <Badge variant="outline">{type}</Badge>
+    }
+  }
+
   const handleApproveCommission = async (commissionId: string) => {
     try {
-      const response = await fetch(`/api/admin/affiliate/commissions/${commissionId}`, {
+      const response = await fetch(`/api/admin/commissions`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          commissionIds: [commissionId],
           status: 'PAID'
         })
       })
@@ -176,12 +214,13 @@ export default function CommissionManagementPage() {
 
   const handleRejectCommission = async (commissionId: string) => {
     try {
-      const response = await fetch(`/api/admin/affiliate/commissions/${commissionId}`, {
+      const response = await fetch(`/api/admin/commissions`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          commissionIds: [commissionId],
           status: 'CANCELLED'
         })
       })
@@ -203,8 +242,10 @@ export default function CommissionManagementPage() {
   // Remove client-side filtering since we're doing server-side filtering
   const filteredCommissions = commissions
 
-  const totalPending = stats?.pending?.amount || commissions.filter(c => c.status === 'PENDING').reduce((sum, c) => sum + c.amount, 0)
-  const totalPaid = stats?.paid?.amount || commissions.filter(c => c.status === 'PAID').reduce((sum, c) => sum + c.amount, 0)
+  const totalPending = stats?.byStatus?.find((s: any) => s.status === 'PENDING')?.amount || 0
+  const totalPaid = stats?.byStatus?.find((s: any) => s.status === 'PAID')?.amount || 0
+  const totalDirect = stats?.byType?.find((t: any) => t.type === 'DIRECT')?.amount || 0
+  const totalLevel = stats?.byType?.find((t: any) => t.type === 'LEVEL')?.amount || 0
 
   if (loading) {
     return (
@@ -227,7 +268,7 @@ export default function CommissionManagementPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="p-2 bg-yellow-100 rounded-lg">
@@ -253,11 +294,11 @@ export default function CommissionManagementPage() {
         <div className="bg-white rounded-lg shadow p-4">
           <div className="flex items-center">
             <div className="p-2 bg-blue-100 rounded-lg">
-              <Package className="h-5 w-5 text-blue-600" />
+              <DollarSign className="h-5 w-5 text-blue-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Tổng giao dịch</p>
-              <p className="text-xl font-bold text-gray-900">{commissions.length}</p>
+              <p className="text-sm text-gray-600">Trực tiếp</p>
+              <p className="text-xl font-bold text-gray-900">{totalDirect.toLocaleString('vi-VN')}đ</p>
             </div>
           </div>
         </div>
@@ -267,9 +308,20 @@ export default function CommissionManagementPage() {
               <DollarSign className="h-5 w-5 text-purple-600" />
             </div>
             <div className="ml-3">
-              <p className="text-sm text-gray-600">Tổng hoa hồng</p>
+              <p className="text-sm text-gray-600">Cấp bậc</p>
+              <p className="text-xl font-bold text-gray-900">{totalLevel.toLocaleString('vi-VN')}đ</p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-center">
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <Package className="h-5 w-5 text-gray-600" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-gray-600">Tổng cộng</p>
               <p className="text-xl font-bold text-gray-900">
-                {(totalPending + totalPaid).toLocaleString('vi-VN')}đ
+                {(stats?.totalAmount || 0).toLocaleString('vi-VN')}đ
               </p>
             </div>
           </div>
@@ -301,6 +353,16 @@ export default function CommissionManagementPage() {
               <SelectItem value="CANCELLED">Đã hủy</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={commissionTypeFilter} onValueChange={setCommissionTypeFilter}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Loại hoa hồng" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả loại</SelectItem>
+              <SelectItem value="DIRECT">Trực tiếp</SelectItem>
+              <SelectItem value="LEVEL">Cấp bậc</SelectItem>
+            </SelectContent>
+          </Select>
           <Select value={levelFilter} onValueChange={setLevelFilter}>
             <SelectTrigger className="w-48">
               <SelectValue placeholder="Cấp độ" />
@@ -325,6 +387,9 @@ export default function CommissionManagementPage() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Affiliate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Sản phẩm
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Khách hàng
@@ -354,14 +419,38 @@ export default function CommissionManagementPage() {
                       <div className="text-sm text-gray-500">
                         {commission.orderAmount.toLocaleString('vi-VN')}đ
                       </div>
-                      {getLevelBadge(commission.level)}
+                      <div className="flex gap-1 mt-1">
+                        {getCommissionTypeBadge(commission.commissionType)}
+                        {getLevelBadge(commission.level)}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">{commission.user.fullName}</div>
                       <div className="text-sm text-gray-500">{commission.user.email}</div>
-                      <div className="text-xs text-blue-600">{commission.user.referralCode}</div>
+                      <div className="text-xs text-blue-600">Level {commission.user.affiliateLevel}</div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div>
+                      {commission.product ? (
+                        <>
+                          <div className="text-sm font-medium text-gray-900">
+                            {commission.product.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {commission.productQuantity}x {commission.productPrice?.toLocaleString('vi-VN')}đ
+                          </div>
+                          <div className="text-xs text-green-600">
+                            {(commission.product.commissionRate * 100).toFixed(1)}% rate
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-sm text-gray-400">
+                          Hoa hồng cấp bậc
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

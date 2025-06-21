@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import {
   Eye,
   CheckCircle,

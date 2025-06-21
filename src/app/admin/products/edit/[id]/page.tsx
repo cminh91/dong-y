@@ -31,7 +31,10 @@ const EditProductPage: FC = () => {
     categoryId: '',
     images: [] as string[],
     isFeatured: false,
-    status: 'ACTIVE'
+    status: 'ACTIVE',
+    // NEW: Commission fields
+    commissionRate: '',
+    allowAffiliate: true
   });
 
   // Fetch product data and categories
@@ -62,7 +65,10 @@ const EditProductPage: FC = () => {
           categoryId: product.category.id,
           images: product.images || [],
           isFeatured: product.isFeatured,
-          status: product.status
+          status: product.status,
+          // NEW: Commission fields
+          commissionRate: product.commissionRatePercent ? product.commissionRatePercent.toString() : '0',
+          allowAffiliate: product.allowAffiliate !== false
         });
       } else {
         alert('Không tìm thấy sản phẩm');
@@ -136,7 +142,10 @@ const EditProductPage: FC = () => {
           price: parseFloat(formData.price),
           salePrice: formData.salePrice ? parseFloat(formData.salePrice) : null,
           stock: parseInt(formData.stock),
-          images: formData.images
+          images: formData.images,
+          // NEW: Commission fields (convert percentage to decimal)
+          commissionRate: parseFloat(formData.commissionRate) / 100,
+          allowAffiliate: formData.allowAffiliate
         }),
       });
 
@@ -282,17 +291,46 @@ const EditProductPage: FC = () => {
                 </select>
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tỷ lệ hoa hồng (%)</label>
+                <input
+                  type="number"
+                  name="commissionRate"
+                  value={formData.commissionRate}
+                  onChange={handleChange}
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  placeholder="0.0"
+                />
+                <p className="text-xs text-gray-500 mt-1">Tỷ lệ hoa hồng cho affiliate (0-100%)</p>
+              </div>
+
               <div className="md:col-span-2">
-                <label className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="isFeatured"
-                    checked={formData.isFeatured}
-                    onChange={handleChange}
-                    className="rounded border-gray-300 text-green-600 focus:ring-green-500"
-                  />
-                  <span className="ml-2 text-sm font-medium text-gray-700">Sản phẩm nổi bật</span>
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="isFeatured"
+                      checked={formData.isFeatured}
+                      onChange={handleChange}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Sản phẩm nổi bật</span>
+                  </label>
+
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      name="allowAffiliate"
+                      checked={formData.allowAffiliate}
+                      onChange={handleChange}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                    <span className="ml-2 text-sm font-medium text-gray-700">Cho phép affiliate</span>
+                  </label>
+                </div>
               </div>
 
               <div className="md:col-span-2">

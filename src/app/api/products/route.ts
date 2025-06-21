@@ -97,6 +97,10 @@ export async function GET(request: NextRequest) {
       category: product.category,
       isFeatured: product.isFeatured,
       status: product.status,
+      // NEW: Commission fields
+      commissionRate: Number(product.commissionRate),
+      commissionRatePercent: Number(product.commissionRate * 100),
+      allowAffiliate: product.allowAffiliate,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt
     }));

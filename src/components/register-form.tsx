@@ -82,6 +82,96 @@ export function RegisterForm() {
     }
   }, [searchParams])
 
+  // Helper functions to validate each field
+  const validateEmail = (email: string): string | undefined => {
+    if (!email) {
+      return "Email là bắt buộc";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return "Email không hợp lệ";
+    }
+    return undefined;
+  };
+
+  const validatePassword = (password: string): string | undefined => {
+    if (!password) {
+      return "Mật khẩu là bắt buộc";
+    } else if (password.length < 6) {
+      return "Mật khẩu phải có ít nhất 6 ký tự";
+    }
+    return undefined;
+  };
+
+  const validateConfirmPassword = (confirmPassword: string, password: string): string | undefined => {
+    if (!confirmPassword) {
+      return "Xác nhận mật khẩu là bắt buộc";
+    } else if (confirmPassword !== password) {
+      return "Mật khẩu xác nhận không khớp";
+    }
+    return undefined;
+  };
+
+  const validateFullName = (fullName: string): string | undefined => {
+    if (!fullName) {
+      return "Họ tên là bắt buộc";
+    }
+    return undefined;
+  };
+
+  const validatePhoneNumber = (phoneNumber: string): string | undefined => {
+    if (!phoneNumber) {
+      return "Số điện thoại là bắt buộc";
+    } else if (!/^[0-9]{10,11}$/.test(phoneNumber)) {
+      return "Số điện thoại không hợp lệ";
+    }
+    return undefined;
+  };
+
+  const validateAddress = (address: string): string | undefined => {
+    if (!address) {
+      return "Địa chỉ là bắt buộc";
+    }
+    return undefined;
+  };
+
+  const validateIdCardNumber = (idCardNumber: string): string | undefined => {
+    if (!idCardNumber) {
+      return "Số CMND/CCCD là bắt buộc";
+    } else if (!/^[0-9]{9,12}$/.test(idCardNumber)) {
+      return "Số CMND/CCCD không hợp lệ";
+    }
+    return undefined;
+  };
+
+  const validateBankName = (bankName: string): string | undefined => {
+    if (!bankName) {
+      return "Tên ngân hàng là bắt buộc";
+    }
+    return undefined;
+  };
+
+  const validateAccountNumber = (accountNumber: string): string | undefined => {
+    if (!accountNumber) {
+      return "Số tài khoản là bắt buộc";
+    } else if (!/^[0-9]{10,16}$/.test(accountNumber)) {
+      return "Số tài khoản không hợp lệ";
+    }
+    return undefined;
+  };
+
+  const validateBranch = (branch: string): string | undefined => {
+    if (!branch) {
+      return "Chi nhánh là bắt buộc";
+    }
+    return undefined;
+  };
+
+  const validateAccountName = (accountName: string): string | undefined => {
+    if (!accountName) {
+      return "Tên chủ tài khoản là bắt buộc";
+    }
+    return undefined;
+  };
+
   // Helper để validate từng bước
   const validateStep = (currentStep: number): boolean => {
     const newErrors: FormErrors = {};
@@ -89,57 +179,23 @@ export function RegisterForm() {
 
     if (currentStep === 1) {
       // Validate thông tin cá nhân (bắt buộc cho tất cả vai trò)
-      if (!formData.email) {
-        newErrors.email = "Email là bắt buộc";
-        isValid = false;
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        newErrors.email = "Email không hợp lệ";
-        isValid = false;
-      }
+      newErrors.email = validateEmail(formData.email);
+      newErrors.password = validatePassword(formData.password);
+      newErrors.confirmPassword = validateConfirmPassword(formData.confirmPassword, formData.password);
+      newErrors.fullName = validateFullName(formData.fullName);
+      newErrors.phoneNumber = validatePhoneNumber(formData.phoneNumber);
+      newErrors.address = validateAddress(formData.address);
 
-      if (!formData.password) {
-        newErrors.password = "Mật khẩu là bắt buộc";
-        isValid = false;
-      } else if (formData.password.length < 6) {
-        newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
-        isValid = false;
-      }
+      if (newErrors.email) isValid = false;
+      if (newErrors.password) isValid = false;
+      if (newErrors.confirmPassword) isValid = false;
+      if (newErrors.fullName) isValid = false;
+      if (newErrors.phoneNumber) isValid = false;
+      if (newErrors.address) isValid = false;
 
-      if (!formData.confirmPassword) {
-        newErrors.confirmPassword = "Xác nhận mật khẩu là bắt buộc";
-        isValid = false;
-      } else if (formData.confirmPassword !== formData.password) {
-        newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
-        isValid = false;
-      }
-
-      if (!formData.fullName) {
-        newErrors.fullName = "Họ tên là bắt buộc";
-        isValid = false;
-      }
-
-      if (!formData.phoneNumber) {
-        newErrors.phoneNumber = "Số điện thoại là bắt buộc";
-        isValid = false;
-      } else if (!/^[0-9]{10,11}$/.test(formData.phoneNumber)) {
-        newErrors.phoneNumber = "Số điện thoại không hợp lệ";
-        isValid = false;
-      }
-
-      if (!formData.address) {
-        newErrors.address = "Địa chỉ là bắt buộc";
-        isValid = false;
-      }
     } else if (currentStep === 2) {
       // Validate CCCD/CMND (bắt buộc cho tất cả vai trò)
-      if (!formData.idCardNumber) {
-        newErrors.idCardNumber = "Số CMND/CCCD là bắt buộc";
-        isValid = false;
-      } else if (!/^[0-9]{9,12}$/.test(formData.idCardNumber)) {
-        newErrors.idCardNumber = "Số CMND/CCCD không hợp lệ";
-        isValid = false;
-      }
-
+      newErrors.idCardNumber = validateIdCardNumber(formData.idCardNumber);
       if (!frontImageUrl) {
         newErrors.frontIdImage = "Vui lòng tải lên ảnh CCCD mặt trước";
         isValid = false;
@@ -149,30 +205,20 @@ export function RegisterForm() {
         newErrors.backIdImage = "Vui lòng tải lên ảnh CCCD mặt sau";
         isValid = false;
       }
+
+      if (newErrors.idCardNumber) isValid = false;
+
     } else if (currentStep === 3) {
       // Validate thông tin ngân hàng (bắt buộc cho tất cả vai trò)
-      if (!formData.bankName) {
-        newErrors.bankName = "Tên ngân hàng là bắt buộc";
-        isValid = false;
-      }
+      newErrors.bankName = validateBankName(formData.bankName);
+      newErrors.accountNumber = validateAccountNumber(formData.accountNumber);
+      newErrors.branch = validateBranch(formData.branch);
+      newErrors.accountName = validateAccountName(formData.accountName);
 
-      if (!formData.accountNumber) {
-        newErrors.accountNumber = "Số tài khoản là bắt buộc";
-        isValid = false;
-      } else if (!/^[0-9]{10,16}$/.test(formData.accountNumber)) {
-        newErrors.accountNumber = "Số tài khoản không hợp lệ";
-        isValid = false;
-      }
-
-      if (!formData.branch) {
-        newErrors.branch = "Chi nhánh là bắt buộc";
-        isValid = false;
-      }
-
-      if (!formData.accountName) {
-        newErrors.accountName = "Tên chủ tài khoản là bắt buộc";
-        isValid = false;
-      }
+      if (newErrors.bankName) isValid = false;
+      if (newErrors.accountNumber) isValid = false;
+      if (newErrors.branch) isValid = false;
+      if (newErrors.accountName) isValid = false;
     }
 
     setErrors(newErrors);
@@ -737,4 +783,3 @@ export function RegisterForm() {
     </div>
   )
 }
-

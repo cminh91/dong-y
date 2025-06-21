@@ -7,7 +7,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Building2, Copy, QrCode, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
-import { toast } from 'sonner';
+// import { toast } from 'sonner'; // Temporarily disabled due to Next.js 15 compatibility issue
+
+// Temporary toast replacement
+const toast = {
+  success: (message: string) => alert(`✅ ${message}`),
+  error: (message: string) => alert(`❌ ${message}`)
+};
 
 interface BankAccount {
   bankName: string;

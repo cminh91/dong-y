@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { PaymentMethodSelector } from '@/components/payment/payment-method-selector';
 import { MoMoPayment } from '@/components/payment/momo-payment';
 import { BankTransferPayment } from '@/components/payment/bank-transfer';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,10 +59,20 @@ const CheckoutPage: FC = () => {
     const storedAff = localStorage.getItem('affiliateSlug');
     const storedRef = localStorage.getItem('referralCode');
 
-    setAffiliateParams({
+    // DEBUG: Log affiliate tracking data
+    console.log('=== CHECKOUT AFFILIATE TRACKING DEBUG ===');
+    console.log('URL aff:', aff);
+    console.log('URL ref:', ref);
+    console.log('localStorage affiliateSlug:', storedAff);
+    console.log('localStorage referralCode:', storedRef);
+
+    const finalParams = {
       affiliateSlug: aff || storedAff || undefined,
       referralCode: ref || storedRef || undefined
-    });
+    };
+
+    console.log('Final affiliate params:', finalParams);
+    setAffiliateParams(finalParams);
   }, []);
   
   // Form data

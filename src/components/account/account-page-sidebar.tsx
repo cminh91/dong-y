@@ -105,26 +105,97 @@ export function AccountPageSidebar({ userPayload }: AccountPageSidebarProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Account Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo and Brand */}
+            <div className="flex items-center">
+              <a href="/" className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                  <i className="fas fa-leaf text-white text-sm"></i>
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-gray-900">AFFILATE</h1>
+                  <p className="text-xs text-gray-500">Tài khoản cá nhân</p>
+                </div>
+              </a>
+            </div>
+
+            {/* User Info and Actions */}
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <a
+                  href="/"
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Về trang chủ"
+                >
+                  <i className="fas fa-home"></i>
+                </a>
+
+                <a
+                  href="/gio-hang"
+                  className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
+                  title="Giỏ hàng"
+                >
+                  <i className="fas fa-shopping-cart"></i>
+                </a>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                  <User className="h-4 w-4 text-gray-600" />
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-gray-900">
+                    {userPayload.fullName}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {userPayload.role === 'COLLABORATOR' && 'Cộng tác viên'}
+                    {userPayload.role === 'AGENT' && 'Đại lý'}
+                    {userPayload.role === 'CUSTOMER' && 'Khách hàng'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex">
         {/* Sidebar */}
         <div className="w-80 bg-white shadow-lg min-h-screen">
-          {/* User Info Header */}
-          <div className="bg-gradient-to-r from-green-600 to-blue-600 p-6 text-white">
-            <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8" />
-              </div>
+          {/* Sidebar Header */}
+          <div className="p-4 border-b">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold">{userPayload.fullName}</h2>
-                <p className="text-green-100">{userPayload.email}</p>
+                <h2 className="text-lg font-semibold text-gray-900">Tài khoản</h2>
+                <p className="text-sm text-gray-500">Quản lý thông tin cá nhân</p>
+              </div>
+            </div>
+          </div>
+
+          {/* User Info */}
+          <div className="p-4 border-b bg-gray-50">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
+                <User className="h-6 w-6 text-gray-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {userPayload.fullName}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {userPayload.email}
+                </p>
                 <div className="flex items-center space-x-2 mt-1">
-                  <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
-                    {userPayload.role === 'COLLABORATOR' ? 'Cộng tác viên' : 
-                     userPayload.role === 'AGENT' ? 'Đại lý' : 
+                  <Badge variant="secondary" className="text-xs">
+                    {userPayload.role === 'COLLABORATOR' ? 'Cộng tác viên' :
+                     userPayload.role === 'AGENT' ? 'Đại lý' :
                      userPayload.role === 'STAFF' ? 'Nhân viên' : 'Khách hàng'}
                   </Badge>
                   {(userPayload.role === "COLLABORATOR" || userPayload.role === "AGENT") && (
-                    <Badge variant="secondary" className="bg-yellow-500/20 text-yellow-100 border-yellow-300/30">
+                    <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800">
                       Level {userPayload.affiliateLevel || 1}
                     </Badge>
                   )}

@@ -78,8 +78,8 @@ export default function SystemSettingsPage() {
           defaultRate: 0.15,
           level1Rate: 0.15,
           level2Rate: 0.05,
-          minWithdrawal: 500000,
-          withdrawalFee: 50000,
+          minWithdrawal: 100000,  // Giảm từ 500k xuống 100k
+          withdrawalFee: 5000,    // Giảm từ 50k xuống 5k
           paymentSchedule: 'weekly'
         },
         registration: {
@@ -118,10 +118,15 @@ export default function SystemSettingsPage() {
 
     setSaving(true)
     try {
+      console.log('=== SAVING AFFILIATE SETTINGS ===')
+      console.log('Current settings:', settings)
+
       // Save each section separately
       const sections = ['commissions', 'registration', 'links', 'notifications', 'security'] as const
 
       for (const section of sections) {
+        console.log(`Saving ${section} settings:`, settings[section])
+
         const response = await fetch('/api/admin/affiliate/settings', {
           method: 'PUT',
           headers: {
@@ -134,6 +139,7 @@ export default function SystemSettingsPage() {
         })
 
         const data = await response.json()
+        console.log(`${section} save response:`, data)
 
         if (!data.success) {
           throw new Error(data.error || `Failed to save ${section} settings`)
@@ -141,10 +147,11 @@ export default function SystemSettingsPage() {
       }
 
       // Show success message
+      console.log('✅ All settings saved successfully!')
       alert('Cài đặt đã được lưu thành công!')
     } catch (error) {
-      console.error('Error saving settings:', error)
-      alert('Có lỗi xảy ra khi lưu cài đặt!')
+      console.error('❌ Error saving settings:', error)
+      alert('Có lỗi xảy ra khi lưu cài đặt: ' + error.message)
     } finally {
       setSaving(false)
     }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { CreditCard, Plus, Edit2, Trash2, RefreshCw } from "lucide-react"
-import { toast } from "sonner"
+import toast from "react-hot-toast"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

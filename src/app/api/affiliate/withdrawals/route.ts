@@ -77,8 +77,8 @@ export async function GET(request: NextRequest) {
     });
 
     // Get monthly withdrawal trends
-    const monthlyTrends = await prisma.$queryRaw`
-      SELECT 
+    const monthlyTrendsRaw = await prisma.$queryRaw`
+      SELECT
         DATE_FORMAT(created_at, '%Y-%m') as month,
         status,
         SUM(amount) as total_amount,
@@ -89,6 +89,14 @@ export async function GET(request: NextRequest) {
       GROUP BY DATE_FORMAT(created_at, '%Y-%m'), status
       ORDER BY month DESC
     `;
+
+    // Convert BigInt to Number for JSON serialization
+    const monthlyTrends = (monthlyTrendsRaw as any[]).map(trend => ({
+      month: trend.month,
+      status: trend.status,
+      total_amount: Number(trend.total_amount),
+      count: Number(trend.count)
+    }));
 
     // Calculate summary
     const summary = stats.reduce((acc, stat) => {
@@ -164,6 +172,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, bankAccountId, note } = body;
 
+    // DEBUG: Log request data
+    console.log('=== WITHDRAWAL REQUEST DEBUG ===');
+    console.log('User ID:', userPayload.userId);
+    console.log('Amount:', amount);
+    console.log('Bank Account ID:', bankAccountId);
+    console.log('Note:', note);
+
     // Validation
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -179,17 +194,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user and verify balance
+    // Get user and verify bank account
     const user = await prisma.user.findUnique({
       where: { id: userPayload.userId },
       select: {
         availableBalance: true,
+        fullName: true,
         bankAccounts: {
           where: { id: bankAccountId },
-          select: { id: true, isPrimary: true }
+          select: { id: true, bankName: true, accountNumber: true, accountName: true }
         }
       }
     });
+
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (user) {
+      console.log('Available balance:', Number(user.availableBalance));
+      console.log('Bank accounts found:', user.bankAccounts.length);
+      console.log('Bank accounts:', user.bankAccounts);
+    }
 
     if (!user) {
       return NextResponse.json(
@@ -200,7 +223,7 @@ export async function POST(request: NextRequest) {
 
     if (user.bankAccounts.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'Bank account not found' },
+        { success: false, error: 'Bank account not found or does not belong to you' },
         { status: 404 }
       );
     }
@@ -210,8 +233,12 @@ export async function POST(request: NextRequest) {
     const availableBalance = Number(user.availableBalance);
     const withdrawalAmount = Number(amount);
 
-    // Check minimum withdrawal amount (e.g., 100,000 VND)
-    const minWithdrawal = 100000;
+    // Get withdrawal settings from database
+    const { getCommissionSettings } = await import('@/lib/affiliate-settings');
+    const commissionSettings = await getCommissionSettings();
+
+    // Check minimum withdrawal amount
+    const minWithdrawal = commissionSettings.minWithdrawal || 100000;
     if (withdrawalAmount < minWithdrawal) {
       return NextResponse.json(
         { success: false, error: `Minimum withdrawal amount is ${minWithdrawal.toLocaleString('vi-VN')}đ` },
@@ -226,10 +253,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate withdrawal fee (e.g., 2% or minimum 5,000 VND)
-    const feeRate = 0.02; // 2%
-    const minFee = 5000;
-    const calculatedFee = Math.max(withdrawalAmount * feeRate, minFee);
+    // Calculate withdrawal fee using settings
+    const withdrawalFee = commissionSettings.withdrawalFee || 5000;
+    const feeRate = 0.02; // 2% backup rate
+    const calculatedFee = Math.max(withdrawalAmount * feeRate, withdrawalFee);
     const netAmount = withdrawalAmount - calculatedFee;
 
     // Check if there's any pending withdrawal
@@ -251,10 +278,10 @@ export async function POST(request: NextRequest) {
     const withdrawal = await prisma.withdrawal.create({
       data: {
         userId: userPayload.userId,
-        bankAccountId,
         amount: withdrawalAmount,
-        status: 'PENDING',
-        adminNote: note || null
+        bankAccountId,
+        userNote: note || null,
+        status: 'PENDING'
       },
       include: {
         bankAccount: {
@@ -286,7 +313,7 @@ export async function POST(request: NextRequest) {
           fee: calculatedFee,
           netAmount,
           status: withdrawal.status,
-          note: withdrawal.adminNote,
+          note: withdrawal.userNote,
           requestedAt: withdrawal.requestedAt,
           bankAccount: {
             bankName: withdrawal.bankAccount.bankName,

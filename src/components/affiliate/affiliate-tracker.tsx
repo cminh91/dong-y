@@ -11,10 +11,14 @@ export function AffiliateTracker() {
     if (affSlug) {
       // Track the click
       trackAffiliateClick(affSlug);
-      
-      // Store affiliate info in session for potential conversion tracking
+
+      // Store affiliate info in BOTH session and local storage for conversion tracking
       sessionStorage.setItem('affiliateSlug', affSlug);
       sessionStorage.setItem('affiliateTimestamp', Date.now().toString());
+
+      // ALSO store in localStorage for checkout page
+      localStorage.setItem('affiliateSlug', affSlug);
+      localStorage.setItem('affiliateTimestamp', Date.now().toString());
     }
   }, [affSlug]);
 
@@ -40,9 +44,10 @@ export function AffiliateTracker() {
 
 // Function to track conversions (call this when an order is completed)
 export const trackAffiliateConversion = async (orderId: string, orderValue: number) => {
-  const affiliateSlug = sessionStorage.getItem('affiliateSlug');
-  const affiliateTimestamp = sessionStorage.getItem('affiliateTimestamp');
-  
+  // Try both sessionStorage and localStorage
+  const affiliateSlug = sessionStorage.getItem('affiliateSlug') || localStorage.getItem('affiliateSlug');
+  const affiliateTimestamp = sessionStorage.getItem('affiliateTimestamp') || localStorage.getItem('affiliateTimestamp');
+
   if (!affiliateSlug || !affiliateTimestamp) {
     return;
   }
@@ -51,11 +56,13 @@ export const trackAffiliateConversion = async (orderId: string, orderValue: numb
   const clickTime = parseInt(affiliateTimestamp);
   const now = Date.now();
   const thirtyDaysInMs = 30 * 24 * 60 * 60 * 1000;
-  
+
   if (now - clickTime > thirtyDaysInMs) {
-    // Clear expired affiliate data
+    // Clear expired affiliate data from both storages
     sessionStorage.removeItem('affiliateSlug');
     sessionStorage.removeItem('affiliateTimestamp');
+    localStorage.removeItem('affiliateSlug');
+    localStorage.removeItem('affiliateTimestamp');
     return;
   }
 

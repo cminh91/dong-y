@@ -5,10 +5,23 @@ import Footer from "@/components/layout/Footer";
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  // Nếu là trang admin thì chỉ render children, không render Header/Footer
-  if (pathname.startsWith("/admin")) {
+
+  // Các trang không cần header/footer
+  const noLayoutPages = [
+    "/admin",
+    "/tai-khoan",
+    "/dang-nhap",
+    "/dang-ky",
+    "/dang-ky-thanh-cong"
+  ];
+
+  // Kiểm tra nếu pathname bắt đầu với bất kỳ path nào trong danh sách
+  const shouldHideLayout = noLayoutPages.some(path => pathname.startsWith(path));
+
+  if (shouldHideLayout) {
     return <>{children}</>;
   }
+
   return (
     <>
       <Header />
