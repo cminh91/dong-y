@@ -3,10 +3,15 @@ import { prisma } from '@/lib/prisma';
 
 // GET /api/hero-sections - Lấy tất cả hero sections
 export async function GET() {
-  try {
-    const heroSections = await prisma.systemSetting.findMany({
+  try {    const heroSections = await prisma.systemSetting.findMany({
       where: {
-        category: 'hero-section'
+        OR: [
+          { category: 'hero-section' },
+          { 
+            category: 'homepage',
+            key: 'hero_main'
+          }
+        ]
       },
       orderBy: {
         key: 'asc'
@@ -77,22 +82,43 @@ export async function PUT(req: NextRequest) {
   try {
     const { id, key, value, description } = await req.json();
 
-    if (!id) {
+    if (!id && !key) {
       return NextResponse.json(
-        { success: false, error: 'ID is required' },
+        { success: false, error: 'ID or key is required' },
         { status: 400 }
       );
     }
 
-    const updatedSection = await prisma.systemSetting.update({
-      where: { id },
-      data: {
-        ...(key && { key }),
-        ...(value && { value }),
-        ...(description !== undefined && { description }),
-        updatedAt: new Date()
-      }
-    });
+    let updatedSection;
+    
+    if (key) {
+      // Update by key (for hero_main)
+      updatedSection = await prisma.systemSetting.upsert({
+        where: { key },
+        update: {
+          ...(value && { value }),
+          ...(description !== undefined && { description }),
+          updatedAt: new Date()
+        },
+        create: {
+          key,
+          value,
+          description: description || 'Hero section data',
+          category: 'homepage'
+        }
+      });
+    } else {
+      // Update by id
+      updatedSection = await prisma.systemSetting.update({
+        where: { id },
+        data: {
+          ...(key && { key }),
+          ...(value && { value }),
+          ...(description !== undefined && { description }),
+          updatedAt: new Date()
+        }
+      });
+    }
 
     return NextResponse.json({
       success: true,

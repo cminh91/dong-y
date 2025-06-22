@@ -61,9 +61,26 @@ const AdminSidebar: FC = () => {
         { title: 'Báo cáo', path: '/admin/affiliate/analytics', icon: 'fas fa-chart-bar' },
         { title: 'Cài đặt', path: '/admin/affiliate/settings', icon: 'fas fa-cogs' }
       ]
+    },    {
+      title: 'Trang chủ',
+      path: '/admin/homepage',
+      icon: 'fas fa-home',
+      children: [
+        { title: 'Tổng quan', path: '/admin/homepage', icon: 'fas fa-eye' },
+        { title: 'Hero Section', path: '/admin/homepage/hero', icon: 'fas fa-image' },
+        { title: 'Giới thiệu', path: '/admin/homepage/about', icon: 'fas fa-info-circle' },
+        { title: 'Lợi ích', path: '/admin/homepage/benefits', icon: 'fas fa-star' },
+        { title: 'Đánh giá', path: '/admin/homepage/testimonials', icon: 'fas fa-quote-left' },
+        // { title: 'Liên hệ', path: '/admin/homepage/contact', icon: 'fas fa-phone' },
+        { title: 'Sản phẩm nổi bật', path: '/admin/homepage/featured-products', icon: 'fas fa-trophy' },
+        { title: 'Danh mục', path: '/admin/homepage/categories', icon: 'fas fa-th-large' },
+        // { title: 'Bài viết', path: '/admin/homepage/posts', icon: 'fas fa-newspaper' },
+        // { title: 'FAQ', path: '/admin/homepage/faqs', icon: 'fas fa-question-circle' }
+      ]
     },
-    { title: 'Hoa hồng', path: '/admin/commissions', icon: 'fas fa-percentage' },
-    { title: 'Cài đặt', path: '/admin/settings', icon: 'fas fa-cog' },
+    // { title: 'Hoa hồng', path: '/admin/commissions', icon: 'fas fa-percentage' },
+    // { title: 'Cài đặt', path: '/admin/settings', icon: 'fas fa-cog' },
+     { title: 'Cài đặt', path: '/admin/settings/contact', icon: 'fas fa-cog' },
   ];
 
   const toggleCollapse = () => {

@@ -6,19 +6,20 @@ import ProductCategories from '@/components/home/ProductCategories';
 import FeaturedProducts from '@/components/home/FeaturedProducts';
 import TestimonialsSection from '@/components/home/TestimonialsSection';
 import ContactSection from '@/components/home/ContactSection';
+import { getHomePageData } from '@/lib/services/homepage';
 
-const Home: FC = () => {
+const Home: FC = async () => {
+  const homePageData = await getHomePageData();
   return (
     <>
       <div className="relative z-10">
         <main>
-          <HeroSection />
-          <AboutSection />
-          <BenefitsSection />
-          <ProductCategories />
-          <FeaturedProducts />
-          <TestimonialsSection />
-          {/* <OrderSection /> */}
+          <HeroSection data={homePageData.heroSection} />
+          <AboutSection data={homePageData.aboutSection} />
+          <BenefitsSection benefits={homePageData.benefits} />
+          <ProductCategories categoriesData={homePageData.featuredCategories} />
+          <FeaturedProducts productsData={homePageData.featuredProducts} />
+          <TestimonialsSection data={homePageData.testimonials} />
           <ContactSection />
         </main>
       </div>

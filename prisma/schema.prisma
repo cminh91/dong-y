@@ -556,7 +556,6 @@ model SystemSetting {
   @@map("system_settings")
 }
 
-// NEW: Commission Level Settings
 model CommissionLevelSetting {
   id              String   @id @default(cuid())
   level           Int      @unique // Level number (1, 2, 3...)
@@ -568,5 +567,23 @@ model CommissionLevelSetting {
 
   @@map("commission_level_settings")
 }
+
+model ContactSection {
+  id           String   @id @default(cuid())
+  address      String
+  phone        String
+  email        String
+  mapUrl       String?  @db.Text // Thay đổi từ String? sang String? @db.Text
+  workingHours String?
+  facebookUrl  String?
+  twitterUrl   String?
+  instagramUrl String?
+  youtubeUrl   String?
+  linkedinUrl  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+
 
 

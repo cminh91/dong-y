@@ -1,20 +1,22 @@
 "use client";
 
 import { FC, useState, useEffect } from 'react';
-import heroData from '../../data/herosction.json';
 import Image from 'next/image';
- 
+import { SystemSetting } from '@/types/api';
 
-interface HeroItem {
-  id: string;
-  name: string;
-  image: string;
-  description: string;
+interface HeroSectionProps {
+  data: SystemSetting | null;
 }
 
-const HeroSection: FC = () => {
+const HeroSection: FC<HeroSectionProps> = ({ data }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+
+  if (!data || !data.value || !Array.isArray(data.value) || data.value.length === 0) {
+    return null; // or a loading/placeholder component
+  }
+
+  const heroData = data.value as any[];
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -28,9 +30,9 @@ const HeroSection: FC = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [heroData.length]);
 
-  const item: HeroItem = heroData[currentIndex];
+  const item = heroData[currentIndex];
 
   return (
     <section className="relative py-16 md:py-24">

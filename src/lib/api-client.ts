@@ -20,15 +20,31 @@ import {
   HomepageSettingRequest
 } from '@/types/api';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
 class ApiClient {
+  private getBaseUrl() {
+    // On the client side, relative URLs are fine.
+    if (typeof window !== 'undefined') {
+      return process.env.NEXT_PUBLIC_BASE_URL || '';
+    }
+
+    // On the server side, we need an absolute URL.
+    // Vercel provides this automatically.
+    if (process.env.VERCEL_URL) {
+      return `https://${process.env.VERCEL_URL}`;
+    }
+
+    // For other hosting providers (and local development),
+    // you must set NEXT_PUBLIC_BASE_URL.
+    return process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  }
+
   private async request<T>(
-    endpoint: string, 
+    endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     try {
-      const response = await fetch(`${BASE_URL}/api${endpoint}`, {
+      const baseUrl = this.getBaseUrl();
+      const response = await fetch(`${baseUrl}/api${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
           ...options.headers,
@@ -86,6 +102,13 @@ class ApiClient {
   }
 
   async createHomeContent(data: CreateHomeSettingRequest): Promise<ApiResponse<SystemSetting>> {
+    return this.request<SystemSetting>('/home-content', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateHomeContentSetting(data: { key: string, value: any, description?: string }): Promise<ApiResponse<SystemSetting>> {
     return this.request<SystemSetting>('/home-content', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -222,6 +245,26 @@ class ApiClient {
     });
   }
 
+  // Products API
+  async getProducts(params: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    search?: string;
+    sortBy?: string;
+    sortOrder?: string;
+    featured?: boolean;
+    status?: string;
+  } = {}): Promise<ApiResponse<{ products: Product[], pagination: any }>> {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) {
+        searchParams.append(key, String(value));
+      }
+    });
+    return this.request(`/products?${searchParams}`);
+  }
+
   // Featured Products APIs
   async getFeaturedProducts(params: {
     limit?: number;
@@ -258,6 +301,18 @@ class ApiClient {
     });
   }
 
+  // Home Category Products APIs
+  async getHomeCategoryProducts(): Promise<ApiResponse<string[]>> {
+    return this.request<string[]>('/home-category-products');
+  }
+
+  async updateHomeCategoryProducts(categoryIds: string[]): Promise<ApiResponse<SystemSetting>> {
+    return this.request<SystemSetting>('/home-category-products', {
+      method: 'POST',
+      body: JSON.stringify({ categoryIds }),
+    });
+  }
+
   // Product Categories APIs
   async getProductCategories(params: {
     includeProducts?: boolean;
@@ -265,11 +320,16 @@ class ApiClient {
     status?: string;
     rootOnly?: boolean;
     limit?: number;
+    ids?: string[];
   } = {}): Promise<ApiResponse<CategoryWithChildren[]>> {
     const searchParams = new URLSearchParams();
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined) {
-        searchParams.append(key, String(value));
+        if (key === 'ids' && Array.isArray(value)) {
+          searchParams.append(key, value.join(','));
+        } else {
+          searchParams.append(key, String(value));
+        }
       }
     });
     

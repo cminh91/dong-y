@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       name,
       slug,
       description,
+      image,
       parentId,
       status = 'ACTIVE'
     } = body;
@@ -152,6 +153,7 @@ export async function POST(request: NextRequest) {
         name,
         slug,
         description,
+        image,
         parentId,
         status
       },

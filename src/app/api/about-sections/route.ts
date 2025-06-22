@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
 // PUT /api/about-sections - Cập nhật about section
 export async function PUT(req: NextRequest) {
   try {
-    const { id, key, value, description } = await req.json();
+    const { id, value } = await req.json();
 
     if (!id) {
       return NextResponse.json(
@@ -71,13 +71,17 @@ export async function PUT(req: NextRequest) {
         { status: 400 }
       );
     }
+    if (!value) {
+      return NextResponse.json(
+        { success: false, error: 'Value is required' },
+        { status: 400 }
+      );
+    }
 
     const updatedSection = await prisma.systemSetting.update({
       where: { id },
       data: {
-        ...(key && { key }),
-        ...(value && { value }),
-        ...(description !== undefined && { description }),
+        value,
         updatedAt: new Date()
       }
     });

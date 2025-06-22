@@ -1,27 +1,28 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { FC } from 'react';
+import { CategoryWithChildren } from '@/types/api';
 
-interface CategoryProps {
+interface CategoryCardProps {
   id: string;
   name: string;
-  image: string;
-  description: string;
+  image: string | null;
+  description: string | null;
 }
 
-const CategoryCard: FC<CategoryProps> = ({ id, name, image, description }) => {
+const CategoryCard: FC<CategoryCardProps> = ({ id, name, image, description }) => {
   return (
     <div className="category-card flex flex-col items-center">
-      <Image 
-        src={image} 
-        alt={name} 
+      <Image
+        src={image || '/images/placeholder.png'}
+        alt={name}
         className="w-auto h-[400px] mx-auto object-contain"
         width={400}
         height={320}
       />
       <div className="overlay">
         <h3 className="text-xl font-bold mb-2">{name}</h3>
-        <p className="text--200 mb-4 text-red-500 font-bold">{description}</p>
+        {description && <p className="text--200 mb-4 text-red-500 font-bold">{description}</p>}
         <Link href={`/category/${id}`} className="text-white flex items-center">
           Xem danh mục
           <i className="fas fa-arrow-right ml-2"></i>
@@ -31,22 +32,20 @@ const CategoryCard: FC<CategoryProps> = ({ id, name, image, description }) => {
   );
 };
 
-const ProductCategories: FC = () => {
-  const categories: CategoryProps[] = [
-    {
-      id: 'thuoc-bo',
-      name: 'HEPASAKY',
-      image: '/images/hepasaky.png',
-      description: 'HỖ TRỢ GIẢI ĐỘC GAN'
-    },
-    {
-      id: 'duoc-lieu',
-      name: 'LYPASAKY',
-      image: '/images/lypasaky.png',
-      description: 'HỖ TRỢ GIẢM MỠ MÁU VÀ TĂNG SỨC BỀN THÀNH MẠCH'
-    },
-  
-  ];
+interface ProductCategoriesProps {
+  categoriesData: CategoryWithChildren[];
+}
+
+const ProductCategories: FC<ProductCategoriesProps> = ({ categoriesData }) => {
+  if (!categoriesData || categoriesData.length === 0) {
+    return (
+      <section className="py-16">
+        <div className="container mx-auto px-4 text-center">
+          <p>Chưa có danh mục nổi bật nào được chọn.</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-16">
@@ -57,8 +56,14 @@ const ProductCategories: FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-items-center">
-          {categories.slice(0, 3).map(category => (
-            <CategoryCard key={category.id} {...category} />
+          {categoriesData.slice(0, 3).map(category => (
+            <CategoryCard
+              key={category.id}
+              id={category.id}
+              name={category.name}
+              image={category.image || null}
+              description={category.description || null}
+            />
           ))}
         </div>
       </div>

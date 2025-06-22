@@ -9,10 +9,17 @@ export async function GET(req: NextRequest) {
     const parentId = searchParams.get('parentId');
     const status = searchParams.get('status') || 'ACTIVE';
     const limit = parseInt(searchParams.get('limit') || '0');
+    const ids = searchParams.get('ids');
 
     const whereClause: any = {
       status: status as any
     };
+
+    if (ids) {
+      whereClause.id = {
+        in: ids.split(','),
+      };
+    }
 
     // Nếu có parentId, lọc theo parent
     if (parentId) {

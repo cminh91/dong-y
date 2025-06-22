@@ -13,18 +13,7 @@ export async function GET(
       where: { id },
       include: {
         parent: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
-        },
-        children: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
+          select: { id: true, name: true, slug: true }
         },
         _count: {
           select: {
@@ -67,11 +56,11 @@ export async function PUT(
       name,
       slug,
       description,
-      parentId,
-      status
+      image,
+      status,
+      parentId
     } = body;
 
-    // Check if category exists
     const existingCategory = await prisma.category.findUnique({
       where: { id }
     });
@@ -83,7 +72,6 @@ export async function PUT(
       );
     }
 
-    // Check if slug already exists (excluding current category)
     if (slug && slug !== existingCategory.slug) {
       const slugExists = await prisma.category.findFirst({
         where: {
@@ -99,52 +87,26 @@ export async function PUT(
         );
       }
     }
-
-    // Check if parent exists (if parentId provided)
-    if (parentId && parentId !== existingCategory.parentId) {
-      const parentCategory = await prisma.category.findUnique({
-        where: { id: parentId }
-      });
-
-      if (!parentCategory) {
+    
+    if (parentId && parentId === id) {
         return NextResponse.json(
-          { success: false, error: 'Parent category not found' },
-          { status: 400 }
+            { success: false, error: 'A category cannot be its own parent.' },
+            { status: 400 }
         );
-      }
-
-      // Prevent circular reference
-      if (parentId === id) {
-        return NextResponse.json(
-          { success: false, error: 'Category cannot be its own parent' },
-          { status: 400 }
-        );
-      }
     }
+
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (slug !== undefined) updateData.slug = slug;
+    if (description !== undefined) updateData.description = description;
+    if (image !== undefined) updateData.image = image;
+    if (status !== undefined) updateData.status = status;
+    if (parentId !== undefined) updateData.parentId = parentId;
+
 
     const updatedCategory = await prisma.category.update({
       where: { id },
-      data: {
-        ...(name && { name }),
-        ...(slug && { slug }),
-        ...(description !== undefined && { description }),
-        ...(parentId !== undefined && { parentId }),
-        ...(status && { status })
-      },
-      include: {
-        parent: {
-          select: {
-            id: true,
-            name: true,
-            slug: true
-          }
-        },
-        _count: {
-          select: {
-            products: true
-          }
-        }
-      }
+      data: updateData
     });
 
     return NextResponse.json({
@@ -169,7 +131,6 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Check if category exists
     const existingCategory = await prisma.category.findUnique({
       where: { id },
       include: {
@@ -189,20 +150,18 @@ export async function DELETE(
       );
     }
 
-    // Check if category has products
     if (existingCategory._count.products > 0) {
       return NextResponse.json(
-        { success: false, error: 'Cannot delete category with products' },
+        { success: false, error: 'Cannot delete category that has products' },
         { status: 400 }
       );
     }
-
-    // Check if category has children
+      
     if (existingCategory._count.children > 0) {
-      return NextResponse.json(
-        { success: false, error: 'Cannot delete category with subcategories' },
-        { status: 400 }
-      );
+        return NextResponse.json(
+            { success: false, error: 'Cannot delete category that has child categories' },
+            { status: 400 }
+        );
     }
 
     await prisma.category.delete({

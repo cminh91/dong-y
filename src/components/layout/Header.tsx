@@ -1,26 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import layoutData from '@/data/layout.json';
-import { FC } from 'react';
-import { HeaderData } from '@/types/layout';
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { FC, useState, useEffect } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
+import layoutData from '@/data/layout.json'
+import { logoutAction } from '@/lib/auth-actions'
 
 interface UserData {
-  id: string;
-  fullName: string;
-  email: string;
-  role: string;
-  availableBalance?: number;
-  totalCommission?: number;
+  role?: 'ADMIN' | 'COLLABORATOR' | 'AGENT' | 'USER'
+  fullName?: string
+  email?: string
+  availableBalance?: number
 }
 
-// Thay đổi interface HeaderProps thành:
-interface HeaderProps extends Partial<HeaderData> {
-  onSearch?: (searchTerm: string) => void;
+interface HeaderProps {
+  productCategories?: any[]
+  blogCategories?: any[]
+  aboutCategories?: any[]
+  cartItemCount?: number
+  onSearch?: (searchTerm: string) => void
 }
 
 const Header: FC<HeaderProps> = (props) => {
@@ -86,24 +86,16 @@ const Header: FC<HeaderProps> = (props) => {
 
   // Handle logout
   const handleLogout = async () => {
-    try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST'
-      });
+    await logoutAction()
+  }
 
-      if (response.ok) {
-        setUser(null);
-        router.push('/');
-        // Refresh page to update cart and other states
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  const { cartItemCount, productCategories, blogCategories, aboutCategories } = defaultProps;
-  const isLoggedIn = !!user;
+  const {
+    cartItemCount = 0,
+    productCategories = [],
+    blogCategories = [],
+    aboutCategories = [],
+  } = defaultProps
+  const isLoggedIn = !!user
   const userName = user?.fullName || '';
   const balance = user?.availableBalance || 0;
 
@@ -161,50 +153,52 @@ const Header: FC<HeaderProps> = (props) => {
                     {/* Dropdown menu */}
                     {showUserDropdown && (
                       <div className="absolute right-0 top-full mt-1 w-52 bg-white rounded-lg shadow-xl border py-2 z-50">
-                      <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">{userName}</p>
-                        <p className="text-xs text-gray-500">{user?.email}</p>
-                      </div>
+                        <div className="px-4 py-2 border-b border-gray-100">
+                          <p className="text-sm font-medium text-gray-900">{userName}</p>
+                          <p className="text-xs text-gray-500">{user?.email}</p>
+                        </div>
 
-                      <Link href="/tai-khoan" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <i className="fas fa-user mr-3 w-4 text-center"></i>
-                        Tài khoản của tôi
-                      </Link>
-
-                      <Link href="/tai-khoan/don-hang" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <i className="fas fa-shopping-bag mr-3 w-4 text-center"></i>
-                        Đơn hàng của tôi
-                      </Link>
-
-                      {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
-                        <>
-                          <Link href="/tai-khoan/affiliate" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                            <i className="fas fa-chart-line mr-3 w-4 text-center"></i>
-                            Affiliate Dashboard
+                        {user?.role === 'ADMIN' ? (
+                          <Link href="/admin" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i className="fas fa-cog mr-3 w-4 text-center"></i>
+                            Quản trị hệ thống
                           </Link>
-                          <Link href="/tai-khoan/affiliate/withdrawals" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                            <i className="fas fa-money-bill-wave mr-3 w-4 text-center"></i>
-                            Rút tiền
-                          </Link>
-                        </>
-                      )}
+                        ) : (
+                          <>
+                            <Link href="/tai-khoan" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                              <i className="fas fa-user mr-3 w-4 text-center"></i>
+                              Tài khoản của tôi
+                            </Link>
 
-                      {user?.role === 'ADMIN' && (
-                        <Link href="/admin" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                          <i className="fas fa-cog mr-3 w-4 text-center"></i>
-                          Quản trị hệ thống
-                        </Link>
-                      )}
+                            <Link href="/tai-khoan/don-hang" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                              <i className="fas fa-shopping-bag mr-3 w-4 text-center"></i>
+                              Đơn hàng của tôi
+                            </Link>
 
-                      <hr className="my-2 border-gray-100" />
+                            {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                              <>
+                                <Link href="/tai-khoan/affiliate" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                  <i className="fas fa-chart-line mr-3 w-4 text-center"></i>
+                                  Affiliate Dashboard
+                                </Link>
+                                <Link href="/tai-khoan/affiliate/withdrawals" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                                  <i className="fas fa-money-bill-wave mr-3 w-4 text-center"></i>
+                                  Rút tiền
+                                </Link>
+                              </>
+                            )}
+                          </>
+                        )}
 
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                      >
-                        <i className="fas fa-sign-out-alt mr-3 w-4 text-center"></i>
-                        Đăng xuất
-                      </button>
+                        <hr className="my-2 border-gray-100" />
+
+                        <button
+                          onClick={handleLogout}
+                          className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                        >
+                          <i className="fas fa-sign-out-alt mr-3 w-4 text-center"></i>
+                          Đăng xuất
+                        </button>
                       </div>
                     )}
                   </div>
@@ -288,21 +282,24 @@ const Header: FC<HeaderProps> = (props) => {
 
                         {mounted && !loading && isLoggedIn ? (
                           <>
-                            <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">
-                              <i className="fas fa-user mr-2"></i>Tài khoản
-                            </Link></li>
-                            <li><Link href="/tai-khoan/don-hang" className="block px-4 py-2 hover:bg-gray-50">
-                              <i className="fas fa-shopping-bag mr-2"></i>Đơn hàng
-                            </Link></li>
-                            {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
-                              <li><Link href="/tai-khoan/affiliate" className="block px-4 py-2 hover:bg-gray-50">
-                                <i className="fas fa-chart-line mr-2"></i>Affiliate
-                              </Link></li>
-                            )}
-                            {user?.role === 'ADMIN' && (
+                            {user?.role === 'ADMIN' ? (
                               <li><Link href="/admin" className="block px-4 py-2 hover:bg-gray-50">
                                 <i className="fas fa-cog mr-2"></i>Quản trị
                               </Link></li>
+                            ) : (
+                              <>
+                                <li><Link href="/tai-khoan" className="block px-4 py-2 hover:bg-gray-50">
+                                  <i className="fas fa-user mr-2"></i>Tài khoản
+                                </Link></li>
+                                <li><Link href="/tai-khoan/don-hang" className="block px-4 py-2 hover:bg-gray-50">
+                                  <i className="fas fa-shopping-bag mr-2"></i>Đơn hàng
+                                </Link></li>
+                                {(user?.role === 'COLLABORATOR' || user?.role === 'AGENT') && (
+                                  <li><Link href="/tai-khoan/affiliate" className="block px-4 py-2 hover:bg-gray-50">
+                                    <i className="fas fa-chart-line mr-2"></i>Affiliate
+                                  </Link></li>
+                                )}
+                              </>
                             )}
                             <li>
                               <button
@@ -409,7 +406,7 @@ const Header: FC<HeaderProps> = (props) => {
             <Link href="/san-pham" className="py-2 hover:text-green-500">Sản phẩm</Link>
             {productCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                {productCategories.map((cat) => (
+                {productCategories.map((cat: any) => (
                   <li key={cat.id} className="relative group/sub">
                     <Link href={cat.path} className="block px-4 py-2 hover:bg-gray-50">
                       {cat.label}
@@ -417,7 +414,7 @@ const Header: FC<HeaderProps> = (props) => {
                     </Link>
                     {cat.children && (
                       <ul className="absolute top-0 left-full z-50 hidden group-hover/sub:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                        {cat.children.map((sub) => (
+                        {cat.children.map((sub: any) => (
                           <li key={sub.id}>
                             <Link href={sub.path} className="block px-4 py-2 hover:bg-gray-50">
                               {sub.label}
@@ -436,7 +433,7 @@ const Header: FC<HeaderProps> = (props) => {
             <Link href="/gioi-thieu" className="py-2 hover:text-green-500">Giới thiệu</Link>
             {Array.isArray(aboutCategories) && aboutCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                {aboutCategories?.map((cat) => (
+                {aboutCategories?.map((cat: any) => (
                   <li key={cat.id}>
                     <Link href={cat.path} className="block px-4 py-2 hover:bg-gray-50">
                       {cat.label}
@@ -451,24 +448,28 @@ const Header: FC<HeaderProps> = (props) => {
             <Link href="/bai-viet" className="py-2 hover:text-green-500">Bài viết</Link>
             {blogCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                {blogCategories.map((cat) => (
-                  <li key={cat.id} className="relative group/sub">
-                    <Link href={cat.path} className="block px-4 py-2 hover:bg-gray-50">
-                      {cat.label}
-                      {cat.children && <i className="fas fa-chevron-right float-right mt-1" />}
-                    </Link>
-                    {cat.children && (
-                      <ul className="absolute top-0 left-full z-50 hidden group-hover/sub:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                        {cat.children.map((sub) => (
-                          <li key={sub.id}>
-                            <Link href={sub.path} className="block px-4 py-2 hover:bg-gray-50">
-                              {sub.label}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </li>
+                {blogCategories.map((cat: any) => (
+                  <div className="grid grid-cols-2 gap-4">
+                    {blogCategories?.map((cat: any) => (
+                      <div key={cat.id}>
+                        <h3 className="font-bold text-lg mb-2">
+                          <Link href={`/bai-viet/${cat.slug}`}>{cat.name}</Link>
+                        </h3>
+                        <ul className="space-y-2">
+                          {cat.children.map((sub: any) => (
+                            <li key={sub.id}>
+                              <Link
+                                href={`/bai-viet/${sub.slug}`}
+                                className="block px-4 py-2 hover:bg-gray-50"
+                              >
+                                {sub.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
                 ))}
               </ul>
             )}
