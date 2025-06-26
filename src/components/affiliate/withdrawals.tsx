@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { 
-  Plus, CreditCard, Clock, CheckCircle, XCircle, 
-  AlertCircle, DollarSign, Calendar, Trash2
+import {
+  Plus, CreditCard, Clock, CheckCircle, XCircle,
+  AlertCircle, DollarSign, Calendar, Trash2, Eye
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -73,7 +73,9 @@ export function AffiliateWithdrawals() {
   const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState('all')
   const [showCreateDialog, setShowCreateDialog] = useState(false)
-  
+  const [showDetailDialog, setShowDetailDialog] = useState(false)
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null)
+
   const [withdrawalForm, setWithdrawalForm] = useState({
     amount: '',
     bankAccountId: '',
@@ -93,10 +95,10 @@ export function AffiliateWithdrawals() {
         limit: '20',
         ...(statusFilter !== 'all' && { status: statusFilter })
       })
-      
+
       const response = await fetch(`/api/affiliate/withdrawals?${params}`)
       const result = await response.json()
-      
+
       if (result.success) {
         setData(result.data)
       } else {
@@ -192,6 +194,11 @@ export function AffiliateWithdrawals() {
     }
   }
 
+  const viewWithdrawalDetail = (withdrawal: Withdrawal) => {
+    setSelectedWithdrawal(withdrawal)
+    setShowDetailDialog(true)
+  }
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'PENDING':
@@ -276,9 +283,15 @@ export function AffiliateWithdrawals() {
                   value={withdrawalForm.amount}
                   onChange={(e) => setWithdrawalForm(prev => ({ ...prev, amount: e.target.value }))}
                 />
-                <p className="text-xs text-gray-500">
-                  Số tiền tối thiểu: 100,000đ
-                </p>
+                {withdrawalAmount > 0 && withdrawalAmount < 100000 ? (
+                  <p className="text-xs text-red-600 font-medium">
+                    Số tiền tối thiểu phải từ 100,000đ
+                  </p>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Số tiền tối thiểu: 100,000đ
+                  </p>
+                )}
               </div>
 
               {withdrawalAmount > 0 && (
@@ -396,8 +409,9 @@ export function AffiliateWithdrawals() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Tổng đã rút</p>
                 <p className="text-2xl font-bold text-purple-600">
-                  {data.balance.totalWithdrawn.toLocaleString('vi-VN')}đ
+                  {data.summary.completed.amount.toLocaleString('vi-VN')}đ
                 </p>
+                <p className="text-xs text-gray-500">{data.summary.completed.count} giao dịch</p>
               </div>
               <CreditCard className="h-8 w-8 text-purple-600" />
             </div>
@@ -479,15 +493,24 @@ export function AffiliateWithdrawals() {
                       )}
                     </td>
                     <td className="py-3 px-4">
-                      {withdrawal.status === 'PENDING' && (
+                      <div className="flex space-x-2">
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => cancelWithdrawal(withdrawal.id)}
+                          onClick={() => viewWithdrawalDetail(withdrawal)}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      )}
+                        {withdrawal.status === 'PENDING' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => cancelWithdrawal(withdrawal.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -523,6 +546,92 @@ export function AffiliateWithdrawals() {
           )}
         </CardContent>
       </Card>
+
+      {/* Detail Dialog */}
+      <Dialog open={showDetailDialog} onOpenChange={setShowDetailDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Chi tiết yêu cầu rút tiền</DialogTitle>
+          </DialogHeader>
+          {selectedWithdrawal && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Mã giao dịch</Label>
+                  <p className="text-sm font-mono">{selectedWithdrawal.id.slice(-8).toUpperCase()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Trạng thái</Label>
+                  <div className="mt-1">{getStatusBadge(selectedWithdrawal.status)}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Số tiền yêu cầu</Label>
+                  <p className="text-lg font-bold">{selectedWithdrawal.amount.toLocaleString('vi-VN')}đ</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Phí giao dịch</Label>
+                  <p className="text-lg font-bold text-red-600">{selectedWithdrawal.fee.toLocaleString('vi-VN')}đ</p>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Số tiền thực nhận</Label>
+                <p className="text-xl font-bold text-green-600">{selectedWithdrawal.netAmount.toLocaleString('vi-VN')}đ</p>
+              </div>
+
+              <div>
+                <Label className="text-sm font-medium text-gray-600">Tài khoản ngân hàng</Label>
+                <div className="mt-1 p-3 bg-gray-50 rounded-lg">
+                  <p className="font-medium">{selectedWithdrawal.bankAccount.bankName}</p>
+                  <p className="text-sm text-gray-600">{selectedWithdrawal.bankAccount.accountNumber}</p>
+                  <p className="text-sm text-gray-600">{selectedWithdrawal.bankAccount.accountHolder}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Ngày tạo</Label>
+                  <p className="text-sm">{formatDate(selectedWithdrawal.requestedAt)}</p>
+                </div>
+                {selectedWithdrawal.approvedAt && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Ngày duyệt</Label>
+                    <p className="text-sm">{formatDate(selectedWithdrawal.approvedAt)}</p>
+                  </div>
+                )}
+                {selectedWithdrawal.completedAt && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Ngày hoàn thành</Label>
+                    <p className="text-sm">{formatDate(selectedWithdrawal.completedAt)}</p>
+                  </div>
+                )}
+                {selectedWithdrawal.rejectedAt && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-600">Ngày từ chối</Label>
+                    <p className="text-sm">{formatDate(selectedWithdrawal.rejectedAt)}</p>
+                  </div>
+                )}
+              </div>
+
+              {selectedWithdrawal.note && (
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">Ghi chú</Label>
+                  <p className="text-sm bg-gray-50 p-2 rounded">{selectedWithdrawal.note}</p>
+                </div>
+              )}
+
+              <div className="flex justify-end">
+                <Button variant="outline" onClick={() => setShowDetailDialog(false)}>
+                  Đóng
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

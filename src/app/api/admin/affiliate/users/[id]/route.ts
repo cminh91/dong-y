@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { UserRole, UserStatus } from '@prisma/client'
 
 // GET /api/admin/affiliate/users/[id] - Lấy thông tin chi tiết affiliate user
 export async function GET(
@@ -148,8 +149,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = params
-    const body = await request.json()
+    const { id } = params;
+    const body = await request.json();
     const {
       fullName,
       phoneNumber,
@@ -159,40 +160,72 @@ export async function PUT(
       affiliateLevel,
       commissionRate,
       availableBalance
-    } = body
+    } = body;
 
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { id }
-    })
+    });
 
     if (!existingUser) {
       return NextResponse.json(
-        { success: false, error: 'User not found' },
+        { success: false, error: 'Không tìm thấy người dùng' },
         { status: 404 }
-      )
+      );
     }
 
-    // Prepare update data
-    const updateData: any = {}
+    // Validate status value
+    if (status && !Object.values(UserStatus).includes(status)) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Trạng thái không hợp lệ. Các giá trị có thể: ${Object.values(UserStatus).join(', ')}` 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate role value
+    if (role && !Object.values(UserRole).includes(role)) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: `Vai trò không hợp lệ. Các giá trị có thể: ${Object.values(UserRole).join(', ')}` 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Prepare update data with type safety
+    const updateData: Partial<{
+      fullName: string;
+      phoneNumber: string;
+      address: string;
+      status: UserStatus;
+      role: UserRole;
+      affiliateLevel: number;
+      commissionRate: number;
+      availableBalance: number;
+    }> = {};
     
-    if (fullName !== undefined) updateData.fullName = fullName
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber
-    if (address !== undefined) updateData.address = address
-    if (status !== undefined) updateData.status = status.toUpperCase()
-    if (role !== undefined) updateData.role = role.toUpperCase()
-    if (affiliateLevel !== undefined) updateData.affiliateLevel = affiliateLevel
-    if (commissionRate !== undefined) updateData.commissionRate = commissionRate
-    if (availableBalance !== undefined) updateData.availableBalance = availableBalance
+    if (fullName !== undefined) updateData.fullName = fullName;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (address !== undefined) updateData.address = address;
+    if (status !== undefined) updateData.status = status as UserStatus;
+    if (role !== undefined) updateData.role = role as UserRole;
+    if (affiliateLevel !== undefined) updateData.affiliateLevel = Number(affiliateLevel);
+    if (commissionRate !== undefined) updateData.commissionRate = Number(commissionRate);
+    if (availableBalance !== undefined) updateData.availableBalance = Number(availableBalance);
 
     // Update user
     const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData
-    })
+    });
 
     return NextResponse.json({
       success: true,
+      message: 'Cập nhật thông tin thành công',
       data: {
         id: updatedUser.id,
         fullName: updatedUser.fullName,
@@ -201,18 +234,17 @@ export async function PUT(
         status: updatedUser.status,
         role: updatedUser.role,
         affiliateLevel: updatedUser.affiliateLevel,
-        commissionRate: Number(updatedUser.commissionRate),
-        availableBalance: Number(updatedUser.availableBalance),
-        updatedAt: updatedUser.updatedAt
+        commissionRate: updatedUser.commissionRate,
+        availableBalance: updatedUser.availableBalance
       }
-    })
+    });
 
   } catch (error) {
-    console.error('Error updating affiliate user:', error)
+    console.error('Error updating affiliate user:', error);
     return NextResponse.json(
-      { success: false, error: 'Internal server error' },
+      { success: false, error: 'Có lỗi xảy ra khi cập nhật thông tin' },
       { status: 500 }
-    )
+    );
   }
 }
 

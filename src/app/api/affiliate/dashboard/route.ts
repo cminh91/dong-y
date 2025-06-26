@@ -53,42 +53,49 @@ export async function GET(request: NextRequest) {
       recentClicks,
       topPerformingLinks
     ] = await Promise.all([
-      // Total affiliate links
+      // Total affiliate links (only PRODUCT links)
       prisma.affiliateLink.count({
-        where: { userId: user.id }
+        where: {
+          userId: user.id,
+          type: 'PRODUCT'
+        }
       }),
 
-      // Active affiliate links
+      // Active affiliate links (only PRODUCT links)
       prisma.affiliateLink.count({
-        where: { 
+        where: {
           userId: user.id,
+          type: 'PRODUCT',
           status: 'ACTIVE'
         }
       }),
 
-      // Total clicks all time
+      // Total clicks all time (only PRODUCT links)
       prisma.affiliateClick.count({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           }
         }
       }),
 
-      // Total conversions all time
+      // Total conversions all time (only PRODUCT links)
       prisma.affiliateConversion.count({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           }
         }
       }),
 
-      // Monthly clicks
+      // Monthly clicks (only PRODUCT links)
       prisma.affiliateClick.count({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           },
           clickedAt: {
             gte: currentMonth
@@ -96,11 +103,12 @@ export async function GET(request: NextRequest) {
         }
       }),
 
-      // Monthly conversions
+      // Monthly conversions (only PRODUCT links)
       prisma.affiliateConversion.count({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           },
           convertedAt: {
             gte: currentMonth
@@ -108,11 +116,12 @@ export async function GET(request: NextRequest) {
         }
       }),
 
-      // Monthly commission
+      // Monthly commission (only PRODUCT links)
       prisma.affiliateConversion.aggregate({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           },
           convertedAt: {
             gte: currentMonth
@@ -123,11 +132,12 @@ export async function GET(request: NextRequest) {
         }
       }),
 
-      // Recent clicks (last 10)
+      // Recent clicks (last 10, only PRODUCT links)
       prisma.affiliateClick.findMany({
         where: {
           affiliateLink: {
-            userId: user.id
+            userId: user.id,
+            type: 'PRODUCT'
           }
         },
         include: {
@@ -144,9 +154,12 @@ export async function GET(request: NextRequest) {
         take: 10
       }),
 
-      // Top performing links
+      // Top performing links (only PRODUCT links)
       prisma.affiliateLink.findMany({
-        where: { userId: user.id },
+        where: {
+          userId: user.id,
+          type: 'PRODUCT'
+        },
         orderBy: [
           { totalClicks: 'desc' },
           { totalConversions: 'desc' }
@@ -172,8 +185,8 @@ export async function GET(request: NextRequest) {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const dailyStats = await prisma.$queryRaw`
-      SELECT 
-        DATE(ac.clicked_at) as date,
+      SELECT
+        DATE_FORMAT(DATE(ac.clicked_at), '%Y-%m-%d') as date,
         COUNT(ac.id) as clicks,
         COUNT(acv.id) as conversions,
         COALESCE(SUM(acv.commission_amount), 0) as commission
@@ -182,6 +195,7 @@ export async function GET(request: NextRequest) {
         AND ac.affiliate_link_id = acv.affiliate_link_id
       INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
       WHERE al.user_id = ${user.id}
+        AND al.type = 'PRODUCT'
         AND ac.clicked_at >= ${thirtyDaysAgo}
       GROUP BY DATE(ac.clicked_at)
       ORDER BY date DESC

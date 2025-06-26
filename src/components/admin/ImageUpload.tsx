@@ -5,12 +5,9 @@ import Image from 'next/image';
 
 interface UploadedFile {
   url: string;
-  secure_url: string;
-  public_id: string;
-  width: number;
-  height: number;
-  format: string;
-  bytes: number;
+  filename: string;
+  size: number;
+  type: string;
   original_filename: string;
 }
 
@@ -25,6 +22,9 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debug log
+  console.log('ImageUpload - Current images:', images);
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -42,8 +42,7 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
       Array.from(files).forEach(file => {
         formData.append('files', file);
       });
-      // Add folder parameter for Cloudinary organization
-      formData.append('folder', folder);
+      // All files will be saved to /uploads/upload/ folder
 
       const response = await fetch('/api/upload', {
         method: 'POST',
@@ -51,14 +50,16 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
       });
 
       const data = await response.json();
+      
+      console.log('Upload response:', data); // Debug log
 
       if (data.success) {
-        // Extract secure_url from Cloudinary response
+        // Extract url from local upload response
         const uploadedFiles: UploadedFile[] = data.data.files;
-        const newImageUrls = uploadedFiles.map(file => file.secure_url);
+        const newImageUrls = uploadedFiles.map(file => file.url);
         const newImages = [...images, ...newImageUrls];
         onImagesChange(newImages);
-        alert(`Upload thành công ${uploadedFiles.length} ảnh lên Cloudinary!`);
+        alert(`Upload thành công ${uploadedFiles.length} ảnh vào thư mục uploads/upload!`);
       } else {
         alert(data.error || 'Có lỗi xảy ra khi upload ảnh');
       }
@@ -141,13 +142,27 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
             PNG, JPG, GIF, WebP tối đa 10MB mỗi ảnh. Tối đa {maxImages} ảnh.
           </p>
           <p className="text-xs text-green-600">
-            ✓ Upload lên Cloudinary CDN
+            ✓ Upload vào thư mục ngoài public /uploads/upload/
           </p>
           <p className="text-xs text-gray-500">
             Đã upload: {images.length}/{maxImages} ảnh
           </p>
         </div>
       </div>
+
+      {/* Debug Area - Remove this after testing */}
+      {images.length > 0 && (
+        <div className="bg-gray-50 p-3 rounded text-xs">
+          <strong>Debug - Image URLs:</strong>
+          <ul className="mt-1">
+            {images.map((image, index) => (
+              <li key={index} className="break-all text-blue-600">
+                {index + 1}: {image}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Image Preview Grid */}
       {images.length > 0 && (
@@ -162,15 +177,25 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
                 className="relative group border rounded-lg overflow-hidden bg-gray-100"
               >
                 <div className="aspect-square relative">
-                  <Image
-                    src={image}
-                    alt={`Upload ${index + 1}`}
-                    fill
-                    className="object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/images/placeholder.png';
-                    }}
-                  />
+                  {image && image.trim() !== '' ? (
+                    <Image
+                      src={image}
+                      alt={`Upload ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      onError={(e) => {
+                        console.error('Image load error for:', image);
+                        (e.target as HTMLImageElement).src = '/images/placeholder.png';
+                      }}
+                      onLoad={() => {
+                        console.log('Image loaded successfully:', image);
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-400 text-xs">Không có ảnh</span>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Image Controls */}

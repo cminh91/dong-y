@@ -43,29 +43,19 @@ const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(
     const isChecked = context.value === value
     
     return (
-      <div className="flex items-center space-x-2">
-        <input
-          ref={ref}
-          type="radio"
-          value={value}
-          checked={isChecked}
-          onChange={() => context.onValueChange?.(value)}
-          name={context.name}
-          className={cn(
-            "h-4 w-4 rounded-full border border-gray-300 text-blue-600 focus:ring-blue-500",
-            className
-          )}
-          {...props}
-        />
-        <div className={cn(
-          "h-4 w-4 rounded-full border border-gray-300 flex items-center justify-center cursor-pointer",
-          isChecked && "border-blue-600 bg-blue-600"
-        )}>
-          {isChecked && (
-            <div className="h-2 w-2 rounded-full bg-white" />
-          )}
-        </div>
-      </div>
+      <input
+        ref={ref}
+        type="radio"
+        value={value}
+        checked={isChecked}
+        onChange={() => context.onValueChange?.(value)}
+        name={context.name}
+        className={cn(
+          "h-4 w-4 rounded-full border border-gray-300 text-blue-600 focus:ring-blue-500",
+          className
+        )}
+        {...props}
+      />
     )
   }
 )

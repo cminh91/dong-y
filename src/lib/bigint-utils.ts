@@ -7,11 +7,15 @@ export function convertBigIntToNumber(obj: any): any {
   if (typeof obj === 'bigint') {
     return Number(obj);
   }
-  
+
+  if (obj instanceof Date) {
+    return obj.toISOString();
+  }
+
   if (Array.isArray(obj)) {
     return obj.map(convertBigIntToNumber);
   }
-  
+
   if (obj !== null && typeof obj === 'object') {
     const converted: any = {};
     for (const key in obj) {
@@ -21,7 +25,7 @@ export function convertBigIntToNumber(obj: any): any {
     }
     return converted;
   }
-  
+
   return obj;
 }
 

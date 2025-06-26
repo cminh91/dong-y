@@ -449,27 +449,29 @@ const Header: FC<HeaderProps> = (props) => {
             {blogCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
                 {blogCategories.map((cat: any) => (
-                  <div className="grid grid-cols-2 gap-4">
-                    {blogCategories?.map((cat: any) => (
-                      <div key={cat.id}>
-                        <h3 className="font-bold text-lg mb-2">
-                          <Link href={`/bai-viet/${cat.slug}`}>{cat.name}</Link>
-                        </h3>
-                        <ul className="space-y-2">
-                          {cat.children.map((sub: any) => (
-                            <li key={sub.id}>
-                              <Link
-                                href={`/bai-viet/${sub.slug}`}
-                                className="block px-4 py-2 hover:bg-gray-50"
-                              >
-                                {sub.label}
-                              </Link>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+                  <li key={cat.id}>
+                    <div className="grid grid-cols-2 gap-4">
+                      {blogCategories?.map((subCat: any) => (
+                        <div key={subCat.id}>
+                          <h3 className="font-bold text-lg mb-2">
+                            <Link href={`/bai-viet/${subCat.slug}`}>{subCat.name}</Link>
+                          </h3>
+                          <ul className="space-y-2">
+                            {subCat.children?.map((sub: any) => (
+                              <li key={sub.id}>
+                                <Link
+                                  href={`/bai-viet/${sub.slug}`}
+                                  className="block px-4 py-2 hover:bg-gray-50"
+                                >
+                                  {sub.label}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </li>
                 ))}
               </ul>
             )}

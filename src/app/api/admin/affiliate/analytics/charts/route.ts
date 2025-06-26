@@ -53,7 +53,7 @@ async function getDailyChartData(daysAgo: number) {
           }
         }
       }),
-      // Daily conversions
+      // Daily conversions & revenue from affiliate conversions
       prisma.affiliateConversion.aggregate({
         _count: { id: true },
         _sum: { 
@@ -67,15 +67,19 @@ async function getDailyChartData(daysAgo: number) {
           }
         }
       }),
-      // Daily commissions
+      // Daily commissions from all sources (affiliate links + referrals)
       prisma.commission.aggregate({
         _count: { id: true },
-        _sum: { amount: true },
+        _sum: { 
+          orderAmount: true,  // Tổng giá trị đơn hàng
+          amount: true        // Tổng hoa hồng
+        },
         where: {
           createdAt: {
             gte: dayStart,
             lte: dayEnd
           },
+          status: 'PENDING',  // Chỉ tính các commission chưa trả
           user: {
             OR: [
               { role: 'COLLABORATOR' },
@@ -90,10 +94,10 @@ async function getDailyChartData(daysAgo: number) {
     dailyStats.push({
       date: dateStr,
       clicks,
-      conversions: conversions._count || 0,
-      commissions: commissions._count || 0,
-      revenue: Number(conversions._sum?.orderValue || 0),
-      commissionsAmount: Number(commissions._sum?.amount || 0)
+      conversions: conversions._count?.id || 0,
+      commissions: commissions._count?.id || 0,
+      revenue: Number(conversions._sum?.orderValue || 0) + Number(commissions._sum?.orderAmount || 0), // Tổng doanh thu từ cả affiliate và referral
+      commissionsAmount: Number(conversions._sum?.commissionAmount || 0) + Number(commissions._sum?.amount || 0) // Tổng hoa hồng từ cả hai nguồn
     })
   }
 

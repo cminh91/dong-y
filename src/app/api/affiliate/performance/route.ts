@@ -14,12 +14,45 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const period = searchParams.get('period') || '30'; // days
-    const linkId = searchParams.get('linkId'); // specific link analysis
+    const period = searchParams.get('period') || '30';
+    const linkId = searchParams.get('linkId');
 
     const periodDays = parseInt(period);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - periodDays);
+
+    // First, let's check if user has any product affiliate links
+    const userAffiliateLinks = await prisma.affiliateLink.findMany({
+      where: {
+        userId: userPayload.userId,
+        type: 'PRODUCT'
+      },
+      select: { id: true, title: true, totalClicks: true, totalConversions: true }
+    });
+
+    // If user has no affiliate links, return default data
+    if (userAffiliateLinks.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: {
+          summary: {
+            totalClicks: 0,
+            totalConversions: 0,
+            totalCommission: 0,
+            conversionRate: 0,
+            avgOrderValue: 0,
+            period: periodDays
+          },
+          chartData: [],
+          demographics: {
+            countries: [],
+            devices: [],
+            hourlyDistribution: []
+          },
+          linkPerformance: []
+        }
+      });
+    }
 
     let whereClause: any = {
       affiliateLink: {
@@ -49,6 +82,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
             AND ac.affiliate_link_id = ${linkId}
           GROUP BY DATE(clicked_at)
@@ -61,6 +95,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
           GROUP BY DATE(clicked_at)
           ORDER BY date ASC
@@ -76,6 +111,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_conversions acv
           INNER JOIN affiliate_links al ON acv.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND acv.converted_at >= ${startDate}
             AND acv.affiliate_link_id = ${linkId}
           GROUP BY DATE(converted_at)
@@ -89,6 +125,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_conversions acv
           INNER JOIN affiliate_links al ON acv.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND acv.converted_at >= ${startDate}
           GROUP BY DATE(converted_at)
           ORDER BY date ASC
@@ -103,6 +140,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
             AND ac.affiliate_link_id = ${linkId}
           GROUP BY country_code
@@ -116,6 +154,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
           GROUP BY country_code
           ORDER BY clicks DESC
@@ -135,6 +174,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
             AND ac.affiliate_link_id = ${linkId}
           GROUP BY device_type
@@ -151,6 +191,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
           GROUP BY device_type
           ORDER BY clicks DESC
@@ -165,6 +206,7 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
             AND ac.affiliate_link_id = ${linkId}
           GROUP BY HOUR(clicked_at)
@@ -177,15 +219,17 @@ export async function GET(request: NextRequest) {
           FROM affiliate_clicks ac
           INNER JOIN affiliate_links al ON ac.affiliate_link_id = al.id
           WHERE al.user_id = ${userPayload.userId}
+            AND al.type = 'PRODUCT'
             AND ac.clicked_at >= ${startDate}
           GROUP BY HOUR(clicked_at)
           ORDER BY hour ASC
         `,
 
-      // Individual link performance
+      // Individual link performance (only PRODUCT links)
       prisma.affiliateLink.findMany({
         where: {
           userId: userPayload.userId,
+          type: 'PRODUCT', // Only include product affiliate links
           ...(linkId ? { id: linkId } : {})
         },
         select: {
@@ -223,20 +267,22 @@ export async function GET(request: NextRequest) {
       })
     ]);
 
-    // Calculate summary stats
-    const totalClicks = (clicksData as any[]).reduce((sum, day) => sum + Number(day.clicks), 0);
-    const totalConversions = (conversionsData as any[]).reduce((sum, day) => sum + Number(day.conversions), 0);
-    const totalCommission = (conversionsData as any[]).reduce((sum, day) => sum + Number(day.commission || 0), 0);
-    const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks * 100) : 0;
+    // Calculate summary stats from period data
+    const periodClicks = (clicksData as any[]).reduce((sum, day) => sum + Number(day.clicks), 0);
+    const periodConversions = (conversionsData as any[]).reduce((sum, day) => sum + Number(day.conversions), 0);
+    const periodCommission = (conversionsData as any[]).reduce((sum, day) => sum + Number(day.commission || 0), 0);
 
-    // Calculate average order value
+    const totalClicks = linkPerformance.reduce((sum, link) => sum + Number(link.totalClicks), 0);
+    const totalConversions = linkPerformance.reduce((sum, link) => sum + Number(link.totalConversions), 0);
+    const totalCommission = linkPerformance.reduce((sum, link) => sum + Number(link.totalCommission), 0);
+
+    const conversionRate = totalClicks > 0 ? (totalConversions / totalClicks * 100) : 0;
     const avgOrderValue = totalConversions > 0 ? (totalCommission / totalConversions) : 0;
 
-    // Prepare chart data (merge clicks and conversions by date)
+    // Prepare chart data
     const chartData = [];
     const dateMap = new Map();
 
-    // Add clicks data
     (clicksData as any[]).forEach(item => {
       const date = item.date.toISOString().split('T')[0];
       dateMap.set(date, { 
@@ -247,7 +293,6 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Add conversions data
     (conversionsData as any[]).forEach(item => {
       const date = item.date.toISOString().split('T')[0];
       const existing = dateMap.get(date) || { date, clicks: 0, conversions: 0, commission: 0 };
@@ -256,12 +301,9 @@ export async function GET(request: NextRequest) {
       dateMap.set(date, existing);
     });
 
-    // Convert to array and sort
     chartData.push(...Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date)));
 
-
-
-    return NextResponse.json({
+    const responseData = {
       success: true,
       data: {
         summary: {
@@ -290,10 +332,11 @@ export async function GET(request: NextRequest) {
             Number((link._count.conversions / link._count.clicks * 100).toFixed(2)) : 0
         }))
       }
-    });
+    };
+
+    return NextResponse.json(responseData);
 
   } catch (error) {
-    console.error('Error fetching performance data:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

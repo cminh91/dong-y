@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import bcryptjs from 'bcryptjs';
 
 export async function GET(
   request: NextRequest,
@@ -115,6 +116,113 @@ export async function GET(
     console.error('Error fetching user details:', error);
     return NextResponse.json(
       { error: 'Có lỗi xảy ra khi tải thông tin người dùng' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Check authentication and admin role
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Vui lòng đăng nhập để thực hiện thao tác này' },
+        { status: 401 }
+      );
+    }
+
+    // Get admin user to verify role
+    const adminUser = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true }
+    });
+
+    if (!adminUser || adminUser.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Bạn không có quyền thực hiện thao tác này' },
+        { status: 403 }
+      );
+    }
+
+    const { id: userId } = params;
+    const { email, fullName, phoneNumber, address, password, role } = await request.json();
+
+    // Check if user exists
+    const targetUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!targetUser) {
+      return NextResponse.json(
+        { error: 'Không tìm thấy người dùng' },
+        { status: 404 }
+      );
+    }
+
+    // Verify email uniqueness if changed
+    if (email !== targetUser.email) {
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        return NextResponse.json(
+          { error: 'Email đã được sử dụng bởi tài khoản khác' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      email,
+      fullName,
+      phoneNumber,
+      address,
+      role,
+      updatedAt: new Date()
+    };
+
+    // Only hash and update password if provided
+    if (password) {
+      const hashedPassword = await bcryptjs.hash(password, 10);
+      updateData.password = hashedPassword;
+    }
+
+    // Update user
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phoneNumber: true,
+        address: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Cập nhật thông tin nhân viên thành công',
+      user: {
+        ...updatedUser,
+        createdAt: updatedUser.createdAt.toISOString(),
+        updatedAt: updatedUser.updatedAt.toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating user:', error);
+    return NextResponse.json(
+      { error: 'Có lỗi xảy ra khi cập nhật thông tin người dùng' },
       { status: 500 }
     );
   }

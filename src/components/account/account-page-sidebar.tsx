@@ -20,7 +20,6 @@ import { AffiliatePerformance } from "../affiliate/performance"
 import { AffiliateCommissions } from "../affiliate/commissions"
 import { AffiliateWithdrawals } from "../affiliate/withdrawals"
 import { AffiliateReferrals } from "../affiliate/referrals"
-import { AffiliateSettings } from "../affiliate/settings"
 
 // Import basic components (you'll need to create these)
 import { ProfileTab } from "./tabs/profile-tab"
@@ -71,7 +70,6 @@ export function AccountPageSidebar({ userPayload }: AccountPageSidebarProps) {
     { id: 'affiliate-commissions', label: 'Hoa hồng', icon: DollarSign, color: 'text-yellow-600' },
     { id: 'affiliate-withdrawals', label: 'Rút tiền', icon: Banknote, color: 'text-red-600' },
     { id: 'affiliate-referrals', label: 'Giới thiệu', icon: Users, color: 'text-teal-600' },
-    { id: 'affiliate-settings', label: 'Cài đặt', icon: Settings, color: 'text-gray-600' },
   ]
 
   const renderContent = () => {
@@ -96,9 +94,6 @@ export function AccountPageSidebar({ userPayload }: AccountPageSidebarProps) {
         return <AffiliateWithdrawals />
       case 'affiliate-referrals':
         return <AffiliateReferrals />
-      case 'affiliate-settings':
-        return <AffiliateSettings />
-      default:
         return <ProfileTab userPayload={userPayload} />
     }
   }

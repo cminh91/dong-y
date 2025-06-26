@@ -4,9 +4,10 @@ import { cookies } from "next/headers"
 import jwt from "jsonwebtoken"
 
 interface UserPayload {
+  userId: string;    // Đổi id thành userId cho đồng nhất với JWT payload
   email: string;
   role: string;
-  id: string;
+  fullName?: string; // Thêm fullName để hiển thị tên trong admin panel
 }
 
 const verifyToken = (token: string): UserPayload | null => {
@@ -28,11 +29,12 @@ export default async function LoginPage() {
   const authToken = cookieStore.get("authToken")?.value;
 
   if (authToken) {
-    const userPayload = verifyToken(authToken);
-    if (userPayload) {
-      if (userPayload.role === "ADMIN") {
+    const userPayload = verifyToken(authToken);    if (userPayload) {
+      // Admin và Staff được phép vào admin panel
+      if (["ADMIN", "STAFF"].includes(userPayload.role)) {
         redirect("/admin");
       } else {
+        // Các role khác (CUSTOMER, COLLABORATOR, AGENT) về trang tài khoản
         redirect("/tai-khoan");
       }
     }

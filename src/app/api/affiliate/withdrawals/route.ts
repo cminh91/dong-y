@@ -62,6 +62,12 @@ export async function GET(request: NextRequest) {
       })
     ]);
 
+    // Get withdrawal settings for fee calculation
+    const { getCommissionSettings } = await import('@/lib/affiliate-settings');
+    const commissionSettings = await getCommissionSettings();
+    const withdrawalFee = commissionSettings.withdrawalFee || 5000;
+    const feeRate = 0.02; // 2% backup rate
+
     // Get withdrawal statistics
     const stats = await prisma.withdrawal.groupBy({
       by: ['status'],
@@ -110,24 +116,30 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        withdrawals: withdrawals.map(withdrawal => ({
-          id: withdrawal.id,
-          amount: Number(withdrawal.amount),
-          fee: Number(withdrawal.amount) * 0.02, // Calculate 2% fee
-          netAmount: Number(withdrawal.amount) * 0.98, // 98% after fee
-          status: withdrawal.status,
-          note: withdrawal.adminNote,
-          requestedAt: withdrawal.requestedAt,
-          approvedAt: withdrawal.status === 'COMPLETED' ? withdrawal.processedAt : null,
-          completedAt: withdrawal.processedAt,
-          rejectedAt: withdrawal.status === 'REJECTED' ? withdrawal.processedAt : null,
-          cancelledAt: null, // No cancelled status in current schema
-          bankAccount: {
-            bankName: withdrawal.bankAccount.bankName,
-            accountNumber: withdrawal.bankAccount.accountNumber,
-            accountHolder: withdrawal.bankAccount.accountName
-          }
-        })),
+        withdrawals: withdrawals.map(withdrawal => {
+          const amount = Number(withdrawal.amount);
+          const calculatedFee = Math.max(amount * feeRate, withdrawalFee);
+          const netAmount = amount - calculatedFee;
+
+          return {
+            id: withdrawal.id,
+            amount,
+            fee: calculatedFee,
+            netAmount,
+            status: withdrawal.status,
+            note: withdrawal.adminNote,
+            requestedAt: withdrawal.requestedAt,
+            approvedAt: withdrawal.status === 'COMPLETED' ? withdrawal.processedAt : null,
+            completedAt: withdrawal.processedAt,
+            rejectedAt: withdrawal.status === 'REJECTED' ? withdrawal.processedAt : null,
+            cancelledAt: null, // No cancelled status in current schema
+            bankAccount: {
+              bankName: withdrawal.bankAccount.bankName,
+              accountNumber: withdrawal.bankAccount.accountNumber,
+              accountHolder: withdrawal.bankAccount.accountName
+            }
+          };
+        }),
         pagination: {
           page,
           limit,

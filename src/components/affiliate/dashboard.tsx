@@ -3,12 +3,10 @@
 import { useState, useEffect } from "react"
 import { 
   TrendingUp, MousePointer, DollarSign, Link as LinkIcon,
-  Users, Calendar, Eye, Target, ArrowUpRight, ArrowDownRight
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 interface DashboardData {
@@ -227,7 +225,10 @@ export function AffiliateDashboard() {
                     </div>
                     <div className="text-right">
                       <p className="text-xs text-gray-500">
-                        {new Date(activity.clickedAt).toLocaleString('vi-VN')}
+                        {activity.clickedAt ?
+                          new Date(activity.clickedAt).toLocaleDateString('vi-VN') :
+                          'Không xác định'
+                        }
                       </p>
                     </div>
                   </div>

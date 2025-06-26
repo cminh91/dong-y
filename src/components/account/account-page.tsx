@@ -27,7 +27,6 @@ import { AffiliatePerformance } from "../affiliate/performance"
 import { AffiliateCommissions } from "../affiliate/commissions"
 import { AffiliateWithdrawals } from "../affiliate/withdrawals"
 import { AffiliateReferrals } from "../affiliate/referrals"
-import { AffiliateSettings } from "../affiliate/settings"
 
 interface UserPayload {
   userId: string
@@ -1040,15 +1039,6 @@ export function AccountPage({ userPayload }: AccountPageProps) {
                   <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-1 border border-teal-200">
                     <div className="bg-white rounded-xl p-4">
                       <AffiliateReferrals />
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* Affiliate Settings */}
-                <TabsContent value="affiliate-settings" className="p-6">
-                  <div className="bg-gradient-to-r from-gray-50 to-slate-50 rounded-2xl p-1 border border-gray-200">
-                    <div className="bg-white rounded-xl p-4">
-                      <AffiliateSettings />
                     </div>
                   </div>
                 </TabsContent>

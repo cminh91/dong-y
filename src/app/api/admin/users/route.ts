@@ -1,10 +1,24 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+﻿import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { UserRole } from '@prisma/client';
+import { NextRequest, NextResponse } from 'next/server';
+import bcrypt from 'bcryptjs';
+import { z } from 'zod';
+
+const STAFF_ROLES = ['STAFF', 'ADMIN']; // Chỉ lấy nhân viên và admin
+
+// Schema cho việc tạo nhân viên mới
+const createStaffSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+  fullName: z.string().min(1, "Họ và tên không được để trống"),
+  phoneNumber: z.string().min(1, "Số điện thoại không được để trống"),
+  address: z.string().optional(),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  role: z.enum(["STAFF", "ADMIN"]),
+});
 
 export async function GET(request: NextRequest) {
-  try {
-    // Check authentication and admin role
+  try {    // Kiểm tra xác thực và quyền xem danh sách users
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -13,20 +27,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get admin user to verify role
-    const adminUser = await prisma.user.findUnique({
+    // Lấy thông tin user và quyền
+    const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true }
+      select: { id: true, role: true }
     });
 
-    if (!adminUser || adminUser.role !== 'ADMIN') {
+    if (!currentUser) {
       return NextResponse.json(
-        { error: 'Bạn không có quyền thực hiện thao tác này' },
-        { status: 403 }
+        { error: 'Không tìm thấy thông tin người dùng' },
+        { status: 404 }
       );
     }
 
-    // Get query parameters
+    // Kiểm tra quyền xem danh sách users
+    if (currentUser.role !== 'ADMIN') {
+      // Nếu là STAFF, kiểm tra quyền 'users.view'
+      const permissionsKey = `user_permissions_${currentUser.id}`;
+      const permissionsSetting = await prisma.systemSetting.findUnique({
+        where: { key: permissionsKey }
+      });      const permissions = permissionsSetting?.value as string[] || [];
+      if (!permissions.includes('users.view')) {
+        return NextResponse.json(
+          { error: 'Bạn không có quyền xem danh sách người dùng' },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Lấy tham số truy vấn
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -34,44 +63,29 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const search = searchParams.get('search');
 
-    // Build where clause
-    const where: any = {};
+    // Xây dựng điều kiện where với role chỉ là STAFF hoặc ADMIN
+    const where: any = {
+      role: {
+        in: role && role !== 'all' ? [role as UserRole] : STAFF_ROLES
+      }
+    };
 
     if (status && status !== 'all') {
       where.status = status;
     }
 
-    if (role && role !== 'all') {
-      where.role = role;
-    }
-
     if (search) {
       where.OR = [
-        {
-          fullName: {
-            contains: search
-            // mode: 'insensitive' not supported in MySQL/MariaDB
-          }
-        },
-        {
-          email: {
-            contains: search
-            // mode: 'insensitive' not supported in MySQL/MariaDB
-          }
-        },
-        {
-          phoneNumber: {
-            contains: search
-            // mode: 'insensitive' not supported in MySQL/MariaDB
-          }
-        }
+        { fullName: { contains: search } },
+        { email: { contains: search } },
+        { phoneNumber: { contains: search } }
       ];
     }
 
-    // Get total count
+    // Lấy tổng số lượng nhân viên
     const totalCount = await prisma.user.count({ where });
 
-    // Get users with pagination
+    // Lấy danh sách nhân viên với phân trang
     const users = await prisma.user.findMany({
       where,
       select: {
@@ -82,30 +96,36 @@ export async function GET(request: NextRequest) {
         address: true,
         role: true,
         status: true,
-        referralCode: true,
-        affiliateLevel: true,
-        totalSales: true,
-        totalCommission: true,
-        availableBalance: true,
         createdAt: true,
         updatedAt: true,
-        // Include related data
-        _count: {
-          select: {
-            orders: true,
-            referredUsers: true
-          }
-        }
       },
       orderBy: [
-        { status: 'asc' }, // PENDING first
+        { role: 'desc' }, // ADMIN trước, sau đó đến STAFF
+        { status: 'asc' },
         { createdAt: 'desc' }
       ],
       skip: (page - 1) * limit,
       take: limit
     });
 
-    // Transform users for frontend
+    // Lấy quyền cho từng nhân viên
+    const userIds = users.map(user => user.id);
+    const permissionsSettings = await prisma.systemSetting.findMany({
+      where: {
+        key: {
+          in: userIds.map(id => `user_permissions_${id}`)
+        }
+      }
+    });
+
+    // Tạo map quyền nhân viên
+    const permissionsMap = permissionsSettings.reduce((acc, setting) => {
+      const userId = setting.key.replace('user_permissions_', '');
+      acc[userId] = setting.value as string[];
+      return acc;
+    }, {} as Record<string, string[]>);
+
+    // Chuyển đổi dữ liệu nhân viên cho frontend
     const transformedUsers = users.map(user => ({
       id: user.id,
       email: user.email,
@@ -114,15 +134,9 @@ export async function GET(request: NextRequest) {
       address: user.address,
       role: user.role,
       status: user.status,
-      referralCode: user.referralCode,
-      affiliateLevel: user.affiliateLevel,
-      totalSales: Number(user.totalSales),
-      totalCommission: Number(user.totalCommission),
-      availableBalance: Number(user.availableBalance),
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
-      ordersCount: user._count.orders,
-      referralsCount: user._count.referredUsers
+      permissions: permissionsMap[user.id] || []
     }));
 
     return NextResponse.json({
@@ -139,9 +153,61 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error fetching users:', error);
+    console.error('Lỗi khi tải danh sách nhân viên:', error);
     return NextResponse.json(
-      { error: 'Có lỗi xảy ra khi tải danh sách người dùng' },
+      { error: 'Có lỗi xảy ra khi tải danh sách nhân viên' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    
+    // Validate input
+    const validatedData = createStaffSchema.parse(body);
+
+    // Check if email already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validatedData.email },
+    });
+
+    if (existingUser) {
+      return NextResponse.json(
+        { success: false, error: "Email đã tồn tại trong hệ thống" },
+        { status: 400 }
+      );
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(validatedData.password, 10);
+
+    // Create new user
+    const newUser = await prisma.user.create({
+      data: {
+        email: validatedData.email,
+        fullName: validatedData.fullName,
+        phoneNumber: validatedData.phoneNumber,
+        address: validatedData.address ?? "",
+        password: hashedPassword,
+        role: validatedData.role,
+      },
+    });
+
+    return NextResponse.json({ success: true, user: newUser });
+  } catch (error) {
+    console.error("Error creating staff:", error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { success: false, error: error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Có lỗi xảy ra khi tạo tài khoản nhân viên" },
       { status: 500 }
     );
   }

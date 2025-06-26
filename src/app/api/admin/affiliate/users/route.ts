@@ -58,8 +58,10 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           bankAccounts: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
+            orderBy: { createdAt: 'desc' }
+          },
+          idCards: {
+            orderBy: { createdAt: 'desc' }
           },
           referredUsers: {
             select: { id: true }
@@ -69,9 +71,13 @@ export async function GET(request: NextRequest) {
             select: { amount: true }
           },
           withdrawals: {
+            orderBy: { createdAt: 'desc' },
             select: { 
+              id: true,
               amount: true,
-              status: true 
+              status: true,
+              createdAt: true,
+              updatedAt: true
             }
           },
           affiliateLinks: {
@@ -90,11 +96,13 @@ export async function GET(request: NextRequest) {
         .filter(w => w.status === 'PENDING')
         .reduce((sum, w) => sum + Number(w.amount), 0)
 
+      // Basic user info
       return {
         id: user.id,
-        fullName: user.fullName,
         email: user.email,
+        fullName: user.fullName,
         phoneNumber: user.phoneNumber,
+        address: user.address,
         role: user.role,
         status: user.status,
         referralCode: user.referralCode,
@@ -106,6 +114,35 @@ export async function GET(request: NextRequest) {
         commissionRate: Number(user.commissionRate),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
+        // Bank accounts with full details
+        bankAccounts: user.bankAccounts.map(account => ({
+          id: account.id,
+          bankName: account.bankName,
+          accountNumber: account.accountNumber,
+          accountName: account.accountName,
+          branch: account.branch,
+          createdAt: account.createdAt,
+          updatedAt: account.updatedAt
+        })),
+        // ID cards with images
+        idCards: user.idCards.map(card => ({
+          id: card.id,
+          idCardNumber: card.idCardNumber,
+          frontImage: card.frontImage,
+          backImage: card.backImage,
+          verifiedAt: card.verifiedAt,
+          rejectedAt: card.rejectedAt,
+          createdAt: card.createdAt,
+          updatedAt: card.updatedAt
+        })),
+        // Withdrawals history
+        withdrawals: user.withdrawals.map(withdrawal => ({
+          id: withdrawal.id,
+          amount: Number(withdrawal.amount),
+          status: withdrawal.status,
+          createdAt: withdrawal.createdAt,
+          updatedAt: withdrawal.updatedAt
+        })),
         stats: {
           referredCount: user.referredUsers.length,
           totalCommissionPaid,

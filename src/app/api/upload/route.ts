@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadToCloudinary, deleteFromCloudinary } from '@/lib/cloudinary';
+import { writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import path from 'path';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check Cloudinary configuration
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-      return NextResponse.json(
-        { success: false, error: 'Cloudinary configuration is missing' },
-        { status: 500 }
-      );
-    }
-
     const formData = await request.formData();
     const files = formData.getAll('files') as File[];
-    const folder = formData.get('folder') as string || 'general'; // Optional folder parameter
+    // Luôn sử dụng folder 'upload', bỏ qua folder parameter
+    const folder = 'upload';
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -22,14 +17,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure upload directory exists - save outside public folder
+    const uploadDir = path.join(process.cwd(), 'uploads', folder);
+    if (!existsSync(uploadDir)) {
+      await mkdir(uploadDir, { recursive: true });
+    }
+
     const uploadedFiles: Array<{
       url: string;
-      secure_url: string;
-      public_id: string;
-      width: number;
-      height: number;
-      format: string;
-      bytes: number;
+      filename: string;
+      size: number;
+      type: string;
       original_filename: string;
     }> = [];
 
@@ -42,7 +40,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Validate file size (10MB max for Cloudinary)
+      // Validate file size (10MB max)
       const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
         return NextResponse.json(
@@ -56,36 +54,30 @@ export async function POST(request: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        // Generate unique public_id
+        // Generate unique filename
         const timestamp = Date.now();
         const randomString = Math.random().toString(36).substring(2, 15);
-        const fileNameWithoutExt = file.name.split('.')[0];
-        const publicId = `${folder}/${fileNameWithoutExt}_${timestamp}_${randomString}`;
+        const fileExtension = path.extname(file.name);
+        const fileNameWithoutExt = file.name.replace(fileExtension, '').replace(/[^a-zA-Z0-9]/g, '_');
+        const filename = `${fileNameWithoutExt}_${timestamp}_${randomString}${fileExtension}`;
 
-        // Upload to Cloudinary
-        const result = await uploadToCloudinary(buffer, {
-          folder: folder,
-          public_id: publicId,
-          resource_type: 'image',
-          transformation: {
-            quality: 'auto',
-            fetch_format: 'auto'
-          }
-        });
+        // Save file to local directory
+        const filePath = path.join(uploadDir, filename);
+        await writeFile(filePath, buffer);
+
+        // Create URL for accessing the file via API
+        const fileUrl = `/api/uploads/${folder}/${filename}`;
 
         uploadedFiles.push({
-          url: result.url,
-          secure_url: result.secure_url,
-          public_id: result.public_id,
-          width: result.width,
-          height: result.height,
-          format: result.format,
-          bytes: result.bytes,
+          url: fileUrl,
+          filename: filename,
+          size: file.size,
+          type: file.type,
           original_filename: file.name
         });
 
       } catch (uploadError) {
-        console.error('Error uploading file to Cloudinary:', uploadError);
+        console.error('Error saving file:', uploadError);
         return NextResponse.json(
           { success: false, error: `Failed to upload ${file.name}` },
           { status: 500 }
@@ -97,7 +89,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: {
         files: uploadedFiles,
-        message: `Successfully uploaded ${uploadedFiles.length} file(s) to Cloudinary`
+        message: `Successfully uploaded ${uploadedFiles.length} file(s) to uploads/${folder}`
       }
     });
 
@@ -110,38 +102,52 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE endpoint to remove files from Cloudinary
+// DELETE endpoint to remove files from local storage
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const publicId = searchParams.get('public_id');
+    const filePath = searchParams.get('file_path');
 
-    if (!publicId) {
+    if (!filePath) {
       return NextResponse.json(
-        { success: false, error: 'public_id parameter is required' },
+        { success: false, error: 'file_path parameter is required' },
         { status: 400 }
       );
     }
 
-    // Check Cloudinary configuration
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    // Security check: ensure the file path is within uploads directory
+    if (!filePath.startsWith('/api/uploads/')) {
       return NextResponse.json(
-        { success: false, error: 'Cloudinary configuration is missing' },
-        { status: 500 }
+        { success: false, error: 'Invalid file path' },
+        { status: 400 }
       );
     }
 
     try {
-      await deleteFromCloudinary(publicId);
+      // Convert API path to file system path
+      const relativePath = filePath.replace('/api/uploads/', '');
+      const fullPath = path.join(process.cwd(), 'uploads', relativePath);
+      
+      // Check if file exists
+      if (!existsSync(fullPath)) {
+        return NextResponse.json(
+          { success: false, error: 'File not found' },
+          { status: 404 }
+        );
+      }
+
+      // Delete the file
+      const { unlink } = await import('fs/promises');
+      await unlink(fullPath);
 
       return NextResponse.json({
         success: true,
-        message: `Successfully deleted image with public_id: ${publicId}`
+        message: `Successfully deleted file: ${filePath}`
       });
     } catch (deleteError) {
-      console.error('Error deleting from Cloudinary:', deleteError);
+      console.error('Error deleting file:', deleteError);
       return NextResponse.json(
-        { success: false, error: 'Failed to delete image from Cloudinary' },
+        { success: false, error: 'Failed to delete file' },
         { status: 500 }
       );
     }
@@ -155,28 +161,25 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-// GET endpoint for Cloudinary configuration check
+// GET endpoint to check upload configuration
 export async function GET() {
   try {
-    const isConfigured = !!(
-      process.env.CLOUDINARY_CLOUD_NAME &&
-      process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET
-    );
+    const uploadsDir = path.join(process.cwd(), 'public', 'uploads');
+    const uploadsExists = existsSync(uploadsDir);
 
     return NextResponse.json({
       success: true,
       data: {
-        cloudinary_configured: isConfigured,
-        cloud_name: process.env.CLOUDINARY_CLOUD_NAME || null,
-        message: isConfigured
-          ? 'Cloudinary is properly configured'
-          : 'Cloudinary configuration is missing'
+        uploads_configured: uploadsExists,
+        uploads_path: uploadsDir,
+        message: uploadsExists
+          ? 'Local uploads directory is ready'
+          : 'Uploads directory will be created on first upload'
       }
     });
 
   } catch (error) {
-    console.error('Error checking Cloudinary config:', error);
+    console.error('Error checking upload config:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

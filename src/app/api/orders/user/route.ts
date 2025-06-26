@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const status = searchParams.get('status');
     const search = searchParams.get('search');
+    const dateFrom = searchParams.get('dateFrom');
+    const dateTo = searchParams.get('dateTo');
 
     // Build where clause
     const where: any = {
@@ -44,6 +46,20 @@ export async function GET(request: NextRequest) {
           }
         }
       ];
+    }
+
+    // Add date filtering
+    if (dateFrom || dateTo) {
+      where.createdAt = {};
+      if (dateFrom) {
+        where.createdAt.gte = new Date(dateFrom);
+      }
+      if (dateTo) {
+        // Add 1 day to include the entire end date
+        const endDate = new Date(dateTo);
+        endDate.setDate(endDate.getDate() + 1);
+        where.createdAt.lt = endDate;
+      }
     }
 
     // Get total count

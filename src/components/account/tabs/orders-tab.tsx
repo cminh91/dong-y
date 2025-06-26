@@ -1,8 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Package, Calendar, Eye, Truck, RefreshCw, Search } from "lucide-react"
+import { Package, Calendar, Eye, Truck, RefreshCw, Search, CalendarIcon, X } from "lucide-react"
 import { toast } from "sonner"
+import { format } from "date-fns"
+import { vi } from "date-fns/locale"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +12,9 @@ import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { cn } from "@/lib/utils"
 
 interface UserPayload {
   userId: string
@@ -55,15 +60,49 @@ export function OrdersTab({ userPayload }: OrdersTabProps) {
   const [statusFilter, setStatusFilter] = useState("all")
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined)
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined)
+  const [dateFilter, setDateFilter] = useState("all") // all, today, week, month, custom
 
   useEffect(() => {
     fetchOrders()
   }, [])
 
+  // Fetch orders when filters change (with debounce for search)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      fetchOrders()
+    }, searchTerm ? 500 : 0) // Debounce search, immediate for other filters
+
+    return () => clearTimeout(timeoutId)
+  }, [statusFilter, searchTerm, dateFilter, dateFrom, dateTo])
+
   const fetchOrders = async () => {
     setLoading(true)
     try {
-      const response = await fetch('/api/orders/user')
+      // Build query parameters
+      const params = new URLSearchParams()
+
+      if (statusFilter !== "all") {
+        params.append('status', statusFilter)
+      }
+
+      if (searchTerm) {
+        params.append('search', searchTerm)
+      }
+
+      // Add date filters for API call
+      if (dateFilter === "custom") {
+        if (dateFrom) {
+          params.append('dateFrom', dateFrom.toISOString())
+        }
+        if (dateTo) {
+          params.append('dateTo', dateTo.toISOString())
+        }
+      }
+
+      const url = `/api/orders/user${params.toString() ? `?${params.toString()}` : ''}`
+      const response = await fetch(url)
       const data = await response.json()
 
       if (data.success) {
@@ -113,11 +152,62 @@ export function OrdersTab({ userPayload }: OrdersTabProps) {
     }
   }
 
+  // Handle date filter changes
+  const handleDateFilterChange = (value: string) => {
+    setDateFilter(value)
+    if (value !== "custom") {
+      setDateFrom(undefined)
+      setDateTo(undefined)
+    }
+  }
+
+  // Clear date filters
+  const clearDateFilters = () => {
+    setDateFilter("all")
+    setDateFrom(undefined)
+    setDateTo(undefined)
+  }
+
+  // Helper function to check if date is in range
+  const isDateInRange = (orderDate: string) => {
+    const date = new Date(orderDate)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    switch (dateFilter) {
+      case "today":
+        const orderDateOnly = new Date(date)
+        orderDateOnly.setHours(0, 0, 0, 0)
+        return orderDateOnly.getTime() === today.getTime()
+
+      case "week":
+        const weekAgo = new Date(today)
+        weekAgo.setDate(today.getDate() - 7)
+        return date >= weekAgo && date <= new Date()
+
+      case "month":
+        const monthAgo = new Date(today)
+        monthAgo.setMonth(today.getMonth() - 1)
+        return date >= monthAgo && date <= new Date()
+
+      case "custom":
+        if (!dateFrom && !dateTo) return true
+        if (dateFrom && !dateTo) return date >= dateFrom
+        if (!dateFrom && dateTo) return date <= dateTo
+        if (dateFrom && dateTo) return date >= dateFrom && date <= dateTo
+        return true
+
+      default:
+        return true
+    }
+  }
+
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.customerName.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || order.status === statusFilter
-    return matchesSearch && matchesStatus
+    const matchesDate = isDateInRange(order.createdAt)
+    return matchesSearch && matchesStatus && matchesDate
   })
 
   if (loading) {
@@ -265,20 +355,124 @@ export function OrdersTab({ userPayload }: OrdersTabProps) {
         </div>
       </div>
 
-      {/* Search */}
+      {/* Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Tìm kiếm theo mã đơn hàng hoặc tên khách hàng..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Tìm kiếm theo mã đơn hàng..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Date Filter */}
+            <Select value={dateFilter} onValueChange={handleDateFilterChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Lọc theo ngày" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả thời gian</SelectItem>
+                <SelectItem value="today">Hôm nay</SelectItem>
+                <SelectItem value="week">7 ngày qua</SelectItem>
+                <SelectItem value="month">30 ngày qua</SelectItem>
+                <SelectItem value="custom">Tùy chọn</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear Filters */}
+            {(dateFilter !== "all" || searchTerm) && (
+              <Button variant="outline" onClick={() => {
+                setSearchTerm("")
+                clearDateFilters()
+              }}>
+                <X className="h-4 w-4 mr-2" />
+                Xóa bộ lọc
+              </Button>
+            )}
           </div>
+
+          {/* Custom Date Range */}
+          {dateFilter === "custom" && (
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Từ ngày</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateFrom && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFrom ? format(dateFrom, "dd/MM/yyyy", { locale: vi }) : "Chọn ngày"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      disabled={(date) => date > new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Đến ngày</label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !dateTo && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateTo ? format(dateTo, "dd/MM/yyyy", { locale: vi }) : "Chọn ngày"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      disabled={(date) => date > new Date() || (dateFrom ? date < dateFrom : false)}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* Results Summary */}
+      {(dateFilter !== "all" || searchTerm || statusFilter !== "all") && (
+        <div className="flex items-center justify-between text-sm text-gray-600 bg-gray-50 px-4 py-2 rounded-lg">
+          <span>
+            Hiển thị {filteredOrders.length} đơn hàng
+            {dateFilter !== "all" && ` • Lọc theo: ${
+              dateFilter === "today" ? "Hôm nay" :
+              dateFilter === "week" ? "7 ngày qua" :
+              dateFilter === "month" ? "30 ngày qua" :
+              dateFilter === "custom" ? "Khoảng thời gian tùy chọn" : ""
+            }`}
+            {statusFilter !== "all" && ` • Trạng thái: ${statusFilter}`}
+            {searchTerm && ` • Tìm kiếm: "${searchTerm}"`}
+          </span>
+        </div>
+      )}
 
       <div className="space-y-4">
         {filteredOrders.map((order) => (
@@ -315,6 +509,7 @@ export function OrdersTab({ userPayload }: OrdersTabProps) {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
+                <h4 className="font-medium text-sm text-gray-700">Khách hàng: {order.customerName}</h4>
                 <h4 className="font-medium text-sm text-gray-700">Sản phẩm:</h4>
                 {order.items.map((item) => (
                   <div key={item.id} className="flex items-center justify-between text-sm">

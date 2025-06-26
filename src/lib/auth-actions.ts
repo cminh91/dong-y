@@ -68,12 +68,12 @@ export async function loginAction(formData: FormData) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 // 7 days
-    })
-
-    // Redirect based on role
-    if (user.role === 'ADMIN') {
+    })    // Redirect based on role
+    if (['ADMIN', 'STAFF'].includes(user.role)) {
+      // Admin và Staff được vào trang admin
       redirect('/admin')
     } else {
+      // Các role khác (CUSTOMER, COLLABORATOR, AGENT) về trang tài khoản
       redirect('/tai-khoan')
     }
 

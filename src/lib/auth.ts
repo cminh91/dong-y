@@ -91,3 +91,34 @@ export async function verifyTokenFromRequest(request: Request): Promise<JWTPaylo
     return null
   }
 }
+
+export async function checkPermission(
+  req: Request,
+  allowedRoles: string[]
+): Promise<boolean> {
+  try {
+    const cookieHeader = req.headers.get('cookie')
+    if (!cookieHeader) return false
+
+    const token = cookieHeader
+      .split(';')
+      .find(c => c.trim().startsWith('authToken='))
+      ?.split('=')[1]
+
+    if (!token) return false
+
+    const payload = verifyToken(token)
+    if (!payload) return false
+
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId }
+    })
+
+    if (!user) return false
+
+    return allowedRoles.includes(user.role)
+  } catch (error) {
+    console.error('Error checking permission:', error)
+    return false
+  }
+}

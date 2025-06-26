@@ -44,11 +44,13 @@ export default async function AdminLayout({
   if (!userPayload) {
     redirect("/dang-nhap");
   }
-
-  // Check if user is admin
-  if (userPayload.role !== "ADMIN") {
+  // Check if user has admin access (ADMIN or STAFF)
+  if (!["ADMIN", "STAFF"].includes(userPayload.role)) {
     redirect("/tai-khoan");
   }
+
+  // Hiển thị role tag trong phần header
+  const roleLabel = userPayload.role === "ADMIN" ? "Quản trị viên" : "Nhân viên";
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -73,9 +75,17 @@ export default async function AdminLayout({
                   <p className="text-xs lg:text-sm text-gray-600 mt-1">Quản lý hệ thống Đông Y Pharmacy</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 lg:space-x-4">
-                <div className="text-xs lg:text-sm text-gray-500">
-                  Xin chào, <span className="font-medium text-gray-900">{userPayload.fullName || 'Admin'}</span>
+              <div className="flex items-center space-x-2 lg:space-x-4">                <div className="flex items-center space-x-2">
+                  <div className="text-xs lg:text-sm text-gray-500">
+                    Xin chào, <span className="font-medium text-gray-900">{userPayload.fullName || 'Admin'}</span>
+                  </div>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    userPayload.role === "ADMIN" 
+                      ? "bg-blue-100 text-blue-800" 
+                      : "bg-green-100 text-green-800"
+                  }`}>
+                    {roleLabel}
+                  </span>
                 </div>
                 <div className="h-6 w-px bg-gray-300"></div>
                 <a

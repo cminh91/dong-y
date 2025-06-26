@@ -5,8 +5,8 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { PaymentMethodSelector } from '@/components/payment/payment-method-selector';
-import { MoMoPayment } from '@/components/payment/momo-payment';
-import { BankTransferPayment } from '@/components/payment/bank-transfer';
+// import { MoMoPayment } from '@/components/payment/momo-payment';
+// import { BankTransferPayment } from '@/components/payment/bank-transfer';
 import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -124,10 +124,9 @@ const CheckoutPage: FC = () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    try {
-      // Sync cart to server before creating order
+    try {      // Sync cart to server before creating order
       if (hasPendingChanges) {
-        toast.info('Đang đồng bộ giỏ hàng với server...');
+        toast.loading('Đang đồng bộ giỏ hàng với server...');
         await syncToServer(); // Sync cart to server
       }
 
@@ -297,10 +296,8 @@ const CheckoutPage: FC = () => {
             onMethodSelect={setSelectedPaymentMethod}
             selectedMethod={selectedPaymentMethod}
             disabled={loading}
-          />
-
-          {/* Payment Components */}
-          {currentOrderId && selectedPaymentMethod === 'momo' && (
+          />          {/* Payment Components */}
+          {/* {currentOrderId && selectedPaymentMethod === 'momo' && (
             <MoMoPayment
               orderId={currentOrderId}
               amount={total}
@@ -316,7 +313,7 @@ const CheckoutPage: FC = () => {
               onSuccess={handlePaymentSuccess}
               onError={handlePaymentError}
             />
-          )}
+          )} */}
         </div>
 
         {/* Tổng quan đơn hàng */}

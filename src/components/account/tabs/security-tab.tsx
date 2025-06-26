@@ -171,39 +171,6 @@ export function SecurityTab({ userPayload }: SecurityTabProps) {
           </Button>
         </CardContent>
       </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="h-5 w-5 mr-2" />
-            Bảo mật tài khoản
-          </CardTitle>
-          <CardDescription>
-            Thông tin bảo mật và xác thực
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h3 className="font-medium">Xác thực 2 bước</h3>
-              <p className="text-sm text-gray-600">Tăng cường bảo mật với xác thực 2 bước</p>
-            </div>
-            <Button variant="outline">
-              Kích hoạt
-            </Button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <h3 className="font-medium">Phiên đăng nhập</h3>
-              <p className="text-sm text-gray-600">Quản lý các thiết bị đã đăng nhập</p>
-            </div>
-            <Button variant="outline">
-              Xem chi tiết
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

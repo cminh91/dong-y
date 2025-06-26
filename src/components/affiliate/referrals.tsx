@@ -1,19 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { 
-  Users, Copy, Share2, TrendingUp, DollarSign, 
-  UserPlus, Crown, Gift, RefreshCw, QrCode
+import { useState, useEffect, useRef } from "react"
+import {
+  Users, Copy, Share2, UserPlus, Crown, QrCode, Download
 } from "lucide-react"
 import { toast } from "sonner"
+import QRCode from "qrcode"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarInitials } from "@/components/ui/avatar"
-import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 
 interface Referral {
   id: string
@@ -21,32 +20,22 @@ interface Referral {
   email: string
   role: string
   status: string
-  totalCommission: number
   affiliateLevel: number
   createdAt: string
   _count: {
     referredUsers: number
     orders: number
   }
-  level2Referrals: Array<{
-    id: string
-    fullName: string
-    email: string
-    totalCommission: number
-    createdAt: string
-  }>
 }
 
 interface ReferralsData {
   user: {
     referralCode: string
     referralLink: string
-    totalCommission: number
     affiliateLevel: number
   }
   referrals: {
     direct: Referral[]
-    level2Count: number
   }
   pagination: {
     page: number
@@ -58,28 +47,41 @@ interface ReferralsData {
     totalReferrals: number
     newReferrals: number
     activeReferrals: number
-    periodCommission: number
-    totalCommission: number
   }
-  recentCommissions: Array<{
-    id: string
-    amount: number
-    createdAt: string
-    fromUser: {
-      fullName: string
-      email: string
-    }
-  }>
 }
 
 export function AffiliateReferrals() {
   const [data, setData] = useState<ReferralsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("")
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     fetchReferrals()
   }, [page])
+
+  useEffect(() => {
+    if (data?.user.referralLink) {
+      generateQRCode(data.user.referralLink)
+    }
+  }, [data?.user.referralLink])
+
+  const generateQRCode = async (text: string) => {
+    try {
+      const url = await QRCode.toDataURL(text, {
+        width: 200,
+        margin: 2,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      })
+      setQrCodeUrl(url)
+    } catch (error) {
+      console.error('Error generating QR code:', error)
+    }
+  }
 
   const fetchReferrals = async () => {
     try {
@@ -88,10 +90,10 @@ export function AffiliateReferrals() {
         page: page.toString(),
         limit: '20'
       })
-      
+
       const response = await fetch(`/api/affiliate/referrals?${params}`)
       const result = await response.json()
-      
+
       if (result.success) {
         setData(result.data)
       } else {
@@ -119,31 +121,13 @@ export function AffiliateReferrals() {
     }
   }
 
-  const regenerateCode = async () => {
-    try {
-      const response = await fetch('/api/affiliate/referrals', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'regenerate_code' })
-      })
-
-      const result = await response.json()
-      if (result.success) {
-        setData(prev => prev ? {
-          ...prev,
-          user: {
-            ...prev.user,
-            referralCode: result.data.referralCode,
-            referralLink: result.data.referralLink
-          }
-        } : null)
-        toast.success('Đã tạo mã giới thiệu mới!')
-      } else {
-        toast.error(result.error || 'Không thể tạo mã mới')
-      }
-    } catch (error) {
-      console.error('Error regenerating code:', error)
-      toast.error('Lỗi kết nối server')
+  const downloadQRCode = () => {
+    if (qrCodeUrl) {
+      const link = document.createElement('a')
+      link.download = `qr-code-${data?.user.referralCode}.png`
+      link.href = qrCodeUrl
+      link.click()
+      toast.success('Đã tải xuống QR code!')
     }
   }
 
@@ -208,7 +192,7 @@ export function AffiliateReferrals() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Hệ thống Giới thiệu</h2>
-          <p className="text-gray-600">Mời bạn bè tham gia và nhận hoa hồng</p>
+          <p className="text-gray-600">Mời bạn bè tham gia với mã giới thiệu của bạn</p>
         </div>
         {getLevelBadge(data.user.affiliateLevel)}
       </div>
@@ -218,52 +202,107 @@ export function AffiliateReferrals() {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Share2 className="h-5 w-5 mr-2" />
-            Link giới thiệu của bạn
+            Mã giới thiệu của bạn
           </CardTitle>
           <CardDescription>
-            Chia sẻ link này để mời bạn bè tham gia và nhận hoa hồng
+            Chia sẻ mã này để mời bạn bè tham gia
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Input
-              value={data.user.referralLink}
-              readOnly
-              className="flex-1 bg-white"
-            />
-            <Button onClick={copyReferralLink}>
-              <Copy className="h-4 w-4" />
-            </Button>
-            <Button onClick={shareReferralLink}>
-              <Share2 className="h-4 w-4" />
-            </Button>
+        <CardContent className="space-y-6">
+          {/* Referral Link */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">Link giới thiệu</label>
+            <div className="flex items-center space-x-2">
+              <Input
+                value={data.user.referralLink}
+                readOnly
+                className="flex-1 bg-white"
+              />
+              <Button onClick={copyReferralLink} size="sm">
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button onClick={shareReferralLink} size="sm">
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600">Mã giới thiệu</p>
-                <div className="flex items-center space-x-2">
-                  <code className="bg-white px-3 py-1 rounded border font-mono text-lg">
-                    {data.user.referralCode}
-                  </code>
-                  <Button size="sm" variant="outline" onClick={copyReferralCode}>
-                    <Copy className="h-3 w-3" />
+          {/* Referral Code and QR */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Referral Code */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">Mã giới thiệu</label>
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                <code className="text-2xl font-bold text-green-600 font-mono">
+                  {data.user.referralCode}
+                </code>
+                <div className="mt-3">
+                  <Button size="sm" variant="outline" onClick={copyReferralCode} className="w-full">
+                    <Copy className="h-4 w-4 mr-2" />
+                    Sao chép mã
                   </Button>
                 </div>
               </div>
+              <p className="text-xs text-gray-500 text-center">
+                Mã này là duy nhất và không thể thay đổi
+              </p>
             </div>
-            
-            <Button variant="outline" onClick={regenerateCode}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Tạo mã mới
-            </Button>
+
+            {/* QR Code */}
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">QR Code</label>
+              <div className="bg-white p-4 rounded-lg border-2 border-dashed border-gray-300 text-center">
+                {qrCodeUrl ? (
+                  <div className="space-y-3">
+                    <img
+                      src={qrCodeUrl}
+                      alt="QR Code"
+                      className="mx-auto w-32 h-32"
+                    />
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="w-full">
+                          <QrCode className="h-4 w-4 mr-2" />
+                          Xem QR lớn
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md">
+                        <DialogHeader>
+                          <DialogTitle>QR Code giới thiệu</DialogTitle>
+                          <DialogDescription>
+                            Quét mã này để truy cập link giới thiệu
+                          </DialogDescription>
+                        </DialogHeader>
+                        <div className="flex flex-col items-center space-y-4">
+                          <img
+                            src={qrCodeUrl}
+                            alt="QR Code"
+                            className="w-64 h-64"
+                          />
+                          <Button onClick={downloadQRCode} className="w-full">
+                            <Download className="h-4 w-4 mr-2" />
+                            Tải xuống QR Code
+                          </Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 mx-auto bg-gray-100 rounded flex items-center justify-center">
+                    <QrCode className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 text-center">
+                Quét để truy cập link giới thiệu
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -295,57 +334,20 @@ export function AffiliateReferrals() {
                 <p className="text-sm text-gray-600">Đang hoạt động</p>
                 <p className="text-2xl font-bold text-purple-600">{data.statistics.activeReferrals}</p>
               </div>
-              <TrendingUp className="h-8 w-8 text-purple-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">HH tháng này</p>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {data.statistics.periodCommission.toLocaleString('vi-VN')}đ
-                </p>
-              </div>
-              <Gift className="h-8 w-8 text-yellow-600" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Tổng hoa hồng</p>
-                <p className="text-2xl font-bold text-indigo-600">
-                  {data.statistics.totalCommission.toLocaleString('vi-VN')}đ
-                </p>
-              </div>
-              <DollarSign className="h-8 w-8 text-indigo-600" />
+              <Users className="h-8 w-8 text-purple-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="referrals" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="referrals">Danh sách giới thiệu</TabsTrigger>
-          <TabsTrigger value="commissions">Hoa hồng từ giới thiệu</TabsTrigger>
-        </TabsList>
-
-        {/* Referrals List */}
-        <TabsContent value="referrals">
-          <Card>
-            <CardHeader>
-              <CardTitle>Danh sách người được giới thiệu</CardTitle>
-              <CardDescription>
-                {data.referrals.direct.length} người được giới thiệu trực tiếp, 
-                {data.referrals.level2Count} người cấp 2
-              </CardDescription>
-            </CardHeader>
+      {/* Referrals List */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Danh sách người được giới thiệu</CardTitle>
+          <CardDescription>
+            {data.referrals.direct.length} người được giới thiệu trực tiếp
+          </CardDescription>
+        </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {data.referrals.direct.length === 0 ? (
@@ -384,36 +386,11 @@ export function AffiliateReferrals() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-green-600">
-                            {referral.totalCommission.toLocaleString('vi-VN')}đ
+                          <p className="text-sm text-gray-500">
+                            Tham gia: {formatDate(referral.createdAt)}
                           </p>
-                          <p className="text-xs text-gray-500">Tổng hoa hồng</p>
                         </div>
                       </div>
-
-                      {/* Level 2 Referrals */}
-                      {referral.level2Referrals.length > 0 && (
-                        <div className="mt-4 pl-12 border-l-2 border-gray-200">
-                          <p className="text-sm font-medium text-gray-700 mb-2">
-                            Cấp 2 ({referral.level2Referrals.length} người):
-                          </p>
-                          <div className="space-y-2">
-                            {referral.level2Referrals.slice(0, 3).map((l2) => (
-                              <div key={l2.id} className="flex items-center justify-between text-sm">
-                                <span>{l2.fullName}</span>
-                                <span className="text-green-600">
-                                  {l2.totalCommission.toLocaleString('vi-VN')}đ
-                                </span>
-                              </div>
-                            ))}
-                            {referral.level2Referrals.length > 3 && (
-                              <p className="text-xs text-gray-500">
-                                +{referral.level2Referrals.length - 3} người khác
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))
                 )}
@@ -447,45 +424,6 @@ export function AffiliateReferrals() {
               )}
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* Commissions from Referrals */}
-        <TabsContent value="commissions">
-          <Card>
-            <CardHeader>
-              <CardTitle>Hoa hồng từ giới thiệu</CardTitle>
-              <CardDescription>Lịch sử hoa hồng nhận được từ người được giới thiệu</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.recentCommissions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <DollarSign className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                    <p className="text-gray-600">Chưa có hoa hồng từ giới thiệu</p>
-                  </div>
-                ) : (
-                  data.recentCommissions.map((commission) => (
-                    <div key={commission.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{commission.fromUser.fullName}</p>
-                        <p className="text-sm text-gray-600">{commission.fromUser.email}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatDate(commission.createdAt)}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold text-green-600">
-                          +{commission.amount.toLocaleString('vi-VN')}đ
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
     </div>
   )
 }

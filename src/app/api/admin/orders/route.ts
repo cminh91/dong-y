@@ -3,10 +3,31 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
+// Hàm kiểm tra quyền
+async function checkPermission(userId: string, requiredPermission: string) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { role: true }
+  });
+
+  if (!user) return false;
+  
+  // ADMIN có tất cả quyền
+  if (user.role === 'ADMIN') return true;
+
+  // Kiểm tra quyền của STAFF
+  const permissionsKey = `user_permissions_${userId}`;
+  const permissionsSetting = await prisma.systemSetting.findUnique({
+    where: { key: permissionsKey }
+  });
+  const permissions = permissionsSetting?.value as string[] || [];
+  return permissions.includes(requiredPermission);
+}
+
 // GET /api/admin/orders - Lấy danh sách đơn hàng cho admin
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and admin role
+    // Kiểm tra xác thực và quyền xem đơn hàng
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -15,17 +36,34 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get admin user to verify role
-    const adminUser = await prisma.user.findUnique({
+    // Lấy thông tin user và quyền
+    const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { role: true }
+      select: { id: true, role: true }
     });
 
-    if (!adminUser || adminUser.role !== 'ADMIN') {
+    if (!currentUser) {
       return NextResponse.json(
-        { error: 'Bạn không có quyền truy cập' },
-        { status: 403 }
+        { error: 'Không tìm thấy thông tin người dùng' },
+        { status: 404 }
       );
+    }
+
+    // Kiểm tra quyền xem đơn hàng
+    if (currentUser.role !== 'ADMIN') {
+      // Nếu là STAFF, kiểm tra quyền 'orders.view'
+      const permissionsKey = `user_permissions_${currentUser.id}`;
+      const permissionsSetting = await prisma.systemSetting.findUnique({
+        where: { key: permissionsKey }
+      });
+      const permissions = permissionsSetting?.value as string[] || [];
+      
+      if (!permissions.includes('orders.view')) {
+        return NextResponse.json(
+          { error: 'Bạn không có quyền xem danh sách đơn hàng' },
+          { status: 403 }
+        );
+      }
     }
 
     // Get query parameters
@@ -174,16 +212,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const adminUser = await prisma.user.findUnique({
+    const currentUser = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     });
 
-    if (!adminUser || adminUser.role !== 'ADMIN') {
+    if (!currentUser) {
       return NextResponse.json(
-        { error: 'Bạn không có quyền tạo đơn hàng' },
-        { status: 403 }
+        { error: 'Không tìm thấy thông tin người dùng' },
+        { status: 404 }
       );
+    }
+
+    // Kiểm tra quyền tạo đơn hàng
+    if (currentUser.role !== 'ADMIN') {
+      const permissionsKey = `user_permissions_${session.user.id}`;
+      const permissionsSetting = await prisma.systemSetting.findUnique({
+        where: { key: permissionsKey }
+      });
+      const permissions = permissionsSetting?.value as string[] || [];
+      
+      if (!permissions.includes('orders.create')) {
+        return NextResponse.json(
+          { error: 'Bạn không có quyền tạo đơn hàng' },
+          { status: 403 }
+        );
+      }
     }
 
     const body = await request.json();
@@ -260,7 +314,6 @@ export async function POST(request: NextRequest) {
         totalAmount,
         shippingFee,
         discountAmount,
-        finalAmount,
         shippingAddress: shippingAddress || user.address,
         notes,
         orderItems: {
@@ -288,6 +341,9 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Tính finalAmount cho order trả về
+    const orderFinalAmount = Number(order.totalAmount) + Number(order.shippingFee) - Number(order.discountAmount);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -296,7 +352,7 @@ export async function POST(request: NextRequest) {
           totalAmount: Number(order.totalAmount),
           shippingFee: Number(order.shippingFee),
           discountAmount: Number(order.discountAmount),
-          finalAmount: Number(order.finalAmount)
+          finalAmount: orderFinalAmount
         }
       },
       message: 'Tạo đơn hàng thành công'
@@ -306,6 +362,146 @@ export async function POST(request: NextRequest) {
     console.error('Error creating admin order:', error);
     return NextResponse.json(
       { error: 'Có lỗi xảy ra khi tạo đơn hàng' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Vui lòng đăng nhập để thực hiện thao tác này' },
+        { status: 401 }
+      );
+    }
+
+    // Kiểm tra quyền cập nhật đơn hàng
+    const hasPermission = await checkPermission(session.user.id, 'orders.update');
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Bạn không có quyền cập nhật đơn hàng' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id, status, paymentStatus, notes, shippingFee, discountAmount } = body;
+
+    // Validate required fields
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID đơn hàng không hợp lệ' },
+        { status: 400 }
+      );
+    }
+
+    // Verify order exists
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: true,
+        orderItems: true
+      }
+    });
+
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Không tìm thấy đơn hàng' },
+        { status: 404 }
+      );
+    }
+
+    // Update order
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: {
+        status,
+        paymentStatus,
+        notes,
+        shippingFee,
+        discountAmount
+      },
+      include: {
+        user: true,
+        orderItems: true
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        order: updatedOrder
+      },
+      message: 'Cập nhật đơn hàng thành công'
+    });
+
+  } catch (error) {
+    console.error('Error updating order:', error);
+    return NextResponse.json(
+      { error: 'Có lỗi xảy ra khi cập nhật đơn hàng' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Vui lòng đăng nhập để thực hiện thao tác này' },
+        { status: 401 }
+      );
+    }
+
+    // Kiểm tra quyền xóa đơn hàng
+    const hasPermission = await checkPermission(session.user.id, 'orders.delete');
+    if (!hasPermission) {
+      return NextResponse.json(
+        { error: 'Bạn không có quyền xóa đơn hàng' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const { id } = body;
+
+    // Validate required fields
+    if (!id) {
+      return NextResponse.json(
+        { error: 'ID đơn hàng không hợp lệ' },
+        { status: 400 }
+      );
+    }
+
+    // Verify order exists
+    const order = await prisma.order.findUnique({
+      where: { id }
+    });
+
+    if (!order) {
+      return NextResponse.json(
+        { error: 'Không tìm thấy đơn hàng' },
+        { status: 404 }
+      );
+    }
+
+    // Delete order
+    await prisma.order.delete({
+      where: { id }
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Xóa đơn hàng thành công'
+    });
+
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    return NextResponse.json(
+      { error: 'Có lỗi xảy ra khi xóa đơn hàng' },
       { status: 500 }
     );
   }

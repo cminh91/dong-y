@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Check authentication and admin role
+    // Kiểm tra xác thực
     const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
@@ -27,16 +27,33 @@ export async function GET(
       );
     }
 
-    const adminUser = await prisma.user.findUnique({
+    // Kiểm tra quyền xem đơn hàng
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     });
 
-    if (!adminUser || adminUser.role !== 'ADMIN') {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Bạn không có quyền truy cập' },
-        { status: 403 }
+        { error: 'Không tìm thấy thông tin người dùng' },
+        { status: 404 }
       );
+    }
+
+    // Kiểm tra quyền
+    if (user.role !== 'ADMIN') {
+      const permissionsKey = `user_permissions_${session.user.id}`;
+      const permissionsSetting = await prisma.systemSetting.findUnique({
+        where: { key: permissionsKey }
+      });
+      const permissions = permissionsSetting?.value as string[] || [];
+      
+      if (!permissions.includes('orders.view')) {
+        return NextResponse.json(
+          { error: 'Bạn không có quyền xem đơn hàng này' },
+          { status: 403 }
+        );
+      }
     }
 
     const { id } = await params;
@@ -140,7 +157,7 @@ export async function GET(
 // PUT /api/admin/orders/[id] - Cập nhật đơn hàng
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     // Check authentication and admin role
@@ -152,16 +169,47 @@ export async function PUT(
       );
     }
 
-    const adminUser = await prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { role: true }
     });
 
-    if (!adminUser || adminUser.role !== 'ADMIN') {
+    if (!user) {
       return NextResponse.json(
-        { error: 'Bạn không có quyền cập nhật đơn hàng' },
-        { status: 403 }
+        { error: 'Không tìm thấy thông tin người dùng' },
+        { status: 404 }
       );
+    }
+
+    // Kiểm tra quyền
+    if (user.role !== 'ADMIN') {
+      const permissionsKey = `user_permissions_${session.user.id}`;
+      console.log('Checking permissions for user:', session.user.id);
+      console.log('Permission key:', permissionsKey);
+
+      const permissionsSetting = await prisma.systemSetting.findUnique({
+        where: { key: permissionsKey }
+      });
+      console.log('Permission setting:', permissionsSetting);
+
+      if (!permissionsSetting) {
+        console.log('No permissions found for user');
+        return NextResponse.json(
+          { error: 'Bạn không có quyền cập nhật đơn hàng' },
+          { status: 403 }
+        );
+      }
+
+      const permissions = permissionsSetting.value as string[];
+      console.log('User permissions:', permissions);
+      
+      if (!permissions.includes('orders.edit')) {
+        console.log('Missing required permission: orders.edit');
+        return NextResponse.json(
+          { error: 'Bạn không có quyền cập nhật đơn hàng' },
+          { status: 403 }
+        );
+      }
     }
 
     const { id } = await params;
@@ -228,17 +276,23 @@ export async function PUT(
       include: {
         user: {
           select: {
+            id: true,
             fullName: true,
             email: true,
-            phoneNumber: true
+            phoneNumber: true,
+            address: true
           }
         },
         orderItems: {
           include: {
             product: {
               select: {
+                id: true,
                 name: true,
-                sku: true
+                price: true,
+                images: true,
+                sku: true,
+                stock: true
               }
             }
           }
@@ -246,20 +300,46 @@ export async function PUT(
       }
     });
 
+    // Tính toán các giá trị
+    const totalAmount = Number(updatedOrder.totalAmount);
+    const shippingFee = Number(updatedOrder.shippingFee);
+    const discountAmount = Number(updatedOrder.discountAmount || 0);
+
+    // Format response để trả về cùng cấu trúc với GET
+    const formattedOrder = {
+      id: updatedOrder.id,
+      orderNumber: updatedOrder.orderNumber,
+      user: updatedOrder.user,
+      status: updatedOrder.status,
+      paymentStatus: updatedOrder.paymentStatus,
+      paymentMethod: updatedOrder.paymentMethod,
+      totalAmount,
+      shippingFee,
+      discountAmount,
+      finalAmount: totalAmount + shippingFee - discountAmount,
+      shippingAddress: updatedOrder.shippingAddress,
+      notes: updatedOrder.notes,
+      trackingNumber: updatedOrder.trackingNumber,
+      createdAt: updatedOrder.createdAt,
+      updatedAt: updatedOrder.updatedAt,
+      orderItems: updatedOrder.orderItems.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        product: item.product,
+        quantity: item.quantity,
+        price: Number(item.price),
+        total: item.quantity * Number(item.price)
+      })),
+      itemCount: updatedOrder.orderItems.length,
+      totalQuantity: updatedOrder.orderItems.reduce((sum, item) => sum + item.quantity, 0)
+    };
+
     // Log the status change
-    console.log(`Admin ${session.user.id} updated order ${id}:`, validatedData);
+    console.log(`User ${session.user.id} updated order ${id}:`, validatedData);
 
     return NextResponse.json({
       success: true,
-      data: {
-        order: {
-          ...updatedOrder,
-          totalAmount: Number(updatedOrder.totalAmount),
-          shippingFee: Number(updatedOrder.shippingFee),
-          discountAmount: Number(updatedOrder.discountAmount),
-          finalAmount: Number(updatedOrder.finalAmount)
-        }
-      },
+      data: { order: formattedOrder },
       message: 'Cập nhật đơn hàng thành công'
     });
 
