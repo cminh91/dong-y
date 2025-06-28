@@ -60,7 +60,18 @@ export async function GET(
       salePrice: product.salePrice ? Number(product.salePrice) : null,
       sku: product.sku,
       stock: product.stock,
-      images: product.images ? JSON.parse(product.images as string) : [],
+      images: (() => {
+        if (product.images) {
+          try {
+            const parsedImages = JSON.parse(product.images as string);
+            return Array.isArray(parsedImages) ? parsedImages : [parsedImages];
+          } catch (e) {
+            // If parsing fails, assume it's a single string URL and wrap it in an array
+            return [product.images as string];
+          }
+        }
+        return [];
+      })(),
       category: product.category,
       isFeatured: product.isFeatured,
       status: product.status,

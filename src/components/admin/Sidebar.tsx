@@ -80,7 +80,7 @@ const AdminSidebar: FC<{ children?: ReactNode }> = () => {
       permission: 'users.view',
       children: [
         { title: 'Danh sách', path: '/admin/users', icon: 'fas fa-list', permission: 'users.view' },
-        { title: 'Thêm mới', path: '/admin/users/add', icon: 'fas fa-user-plus', permission: 'users.create' }
+        // { title: 'Thêm mới', path: '/admin/users/add', icon: 'fas fa-user-plus', permission: 'users.create' }
       ]
     },
     {

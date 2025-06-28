@@ -1,7 +1,9 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import PostFilters from '@/components/admin/PostFilters';
+import PostDeleteAction from '@/components/admin/PostDeleteAction';
 import AdminPagination from '@/components/admin/AdminPagination';
+
 
 interface Post {
   id: string;
@@ -176,9 +178,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
                     <Link href={`/admin/posts/edit/${post.id}`} className="text-blue-600 hover:text-blue-900 mr-4">
                       <i className="fas fa-edit"></i>
                     </Link>
-                    <button className="text-red-600 hover:text-red-900">
-                      <i className="fas fa-trash"></i>
-                    </button>
+                    <PostDeleteAction postId={post.id} postTitle={post.title} />
                   </td>
                 </tr>
               ))}

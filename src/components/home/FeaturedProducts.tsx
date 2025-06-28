@@ -12,22 +12,38 @@ const ProductCard: FC<ProductCardProps> = ({ product, reverse }) => {
   const { name, images, description, price, salePrice, slug } = product;
 
   const getImageUrl = () => {
-    let imageArray: any[] = [];
-    if (typeof images === 'string') {
-      try {
-        imageArray = JSON.parse(images);
-      } catch (e) {
-        // Không phải là chuỗi JSON hợp lệ, bỏ qua
-      }
-    } else if (Array.isArray(images)) {
-      imageArray = images;
+    if (!images) {
+      return '/images/placeholder.png';
     }
 
-    if (imageArray.length > 0 && typeof imageArray[0] === 'string') {
-      return imageArray[0];
+    let imageUrls: string[] = [];
+
+    if (typeof images === 'string') {
+      try {
+        const parsed = JSON.parse(images);
+        if (Array.isArray(parsed)) {
+          imageUrls = parsed.map(item => typeof item === 'string' ? item : '').filter(Boolean);
+        } else if (typeof parsed === 'string') {
+          imageUrls = [parsed];
+        }
+      } catch (e) {
+        imageUrls = [images];
+      }
+    } else if (Array.isArray(images)) {
+      imageUrls = images.map(item => {
+        if (typeof item === 'string') {
+          try {
+            const parsed = JSON.parse(item);
+            return Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'string' ? parsed[0] : '';
+          } catch (e) {
+            return item;
+          }
+        }
+        return '';
+      }).filter(Boolean);
     }
-    
-    return '/images/placeholder.png';
+
+    return imageUrls.length > 0 ? imageUrls[0] : '/images/placeholder.png';
   };
 
   const imageUrl = getImageUrl();

@@ -23,8 +23,7 @@ export default function ImageUpload({ images, onImagesChange, maxImages = 5, fol
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Debug log
-  console.log('ImageUpload - Current images:', images);
+  console.log('ImageUpload - Received images prop:', images, 'Type:', typeof images, 'Is Array:', Array.isArray(images));
 
   const handleFileSelect = async (files: FileList | null) => {
     if (!files || files.length === 0) return;

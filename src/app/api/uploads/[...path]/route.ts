@@ -8,7 +8,7 @@ export async function GET(
   { params }: { params: { path: string[] } }
 ) {
   try {
-    const filePath = params.path.join('/');
+    const filePath = (await params).path.join('/');
     
     // Security check: prevent directory traversal
     if (filePath.includes('..') || filePath.includes('\\')) {
@@ -23,10 +23,22 @@ export async function GET(
     
     // Check if file exists
     if (!existsSync(fullPath)) {
-      return NextResponse.json(
-        { error: 'File not found' },
-        { status: 404 }
-      );
+      const placeholderPath = path.join(process.cwd(), 'public', 'images', 'placeholder.png');
+      if (existsSync(placeholderPath)) {
+        const placeholderBuffer = await readFile(placeholderPath);
+        return new NextResponse(placeholderBuffer, {
+          headers: {
+            'Content-Type': 'image/png',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Content-Length': placeholderBuffer.length.toString(),
+          },
+        });
+      } else {
+        return NextResponse.json(
+          { error: 'File not found and no placeholder available' },
+          { status: 404 }
+        );
+      }
     }
 
     // Read file

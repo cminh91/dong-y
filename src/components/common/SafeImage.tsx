@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState,useEffect } from 'react'
 import Image from 'next/image'
 
 interface SafeImageProps {
@@ -20,35 +20,47 @@ export default function SafeImage({
   className = '',
   fallbackSrc = '/images/placeholder.png'
 }: SafeImageProps) {
-  const [imageSrc, setImageSrc] = useState(() => {
-    // Handle different src types
+  const [currentSrc, setCurrentSrc] = useState(() => {
     if (!src) return fallbackSrc
-
     if (Array.isArray(src)) {
       return src.length > 0 ? src[0] : fallbackSrc
     }
-
     if (typeof src === 'string') {
-      // Handle empty or invalid strings
       if (src.trim() === '' || src === 'null' || src === 'undefined') {
         return fallbackSrc
       }
-
       return src
     }
-
     return fallbackSrc
   })
 
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+    setCurrentSrc(() => {
+      if (!src) return fallbackSrc
+      if (Array.isArray(src)) {
+        return src.length > 0 ? src[0] : fallbackSrc
+      }
+      if (typeof src === 'string') {
+        if (src.trim() === '' || src === 'null' || src === 'undefined') {
+          return fallbackSrc
+        }
+        return src
+      }
+      return fallbackSrc
+    })
+  }, [src, fallbackSrc]);
+
+
   const handleError = () => {
-    if (imageSrc !== fallbackSrc) {
-      setImageSrc(fallbackSrc)
-    }
+    setHasError(true);
   }
 
   return (
     <Image
-      src={imageSrc}
+      src={hasError ? fallbackSrc : currentSrc}
       alt={alt}
       width={width}
       height={height}

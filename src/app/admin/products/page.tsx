@@ -167,13 +167,26 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     const displayPrice = product.salePrice || product.price;
                     const hasDiscount = product.salePrice && product.salePrice < product.price;
 
+                    let parsedImages: string[] = [];
+                    try {
+                      if (typeof product.images === 'string') {
+                        parsedImages = JSON.parse(product.images);
+                      } else if (Array.isArray(product.images)) {
+                        parsedImages = product.images;
+                      }
+                    } catch (e) {
+                      console.error("Error parsing product images JSON:", e);
+                      parsedImages = [];
+                    }
+                    const imageUrl = parsedImages.length > 0 ? parsedImages[0] : '/images/placeholder.png';
+
                     return (
                       <tr key={product.id}>
                         <td className="px-4 sm:px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className="flex-shrink-0 h-10 w-10 relative">
                               <Image
-                                src={product.images?.[0] || '/images/placeholder.png'}
+                                src={imageUrl}
                                 alt={product.name}
                                 fill
                                 className="object-cover rounded-md"
@@ -254,12 +267,25 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 const displayPrice = product.salePrice || product.price;
                 const hasDiscount = product.salePrice && product.salePrice < product.price;
 
+                let parsedImages: string[] = [];
+                try {
+                  if (typeof product.images === 'string') {
+                    parsedImages = JSON.parse(product.images);
+                  } else if (Array.isArray(product.images)) {
+                    parsedImages = product.images;
+                  }
+                } catch (e) {
+                  console.error("Error parsing product images JSON:", e);
+                  parsedImages = [];
+                }
+                const imageUrl = parsedImages.length > 0 ? parsedImages[0] : '/images/placeholder.png';
+
                 return (
                   <div key={product.id} className="p-4">
                     <div className="flex items-center mb-3">
                       <div className="flex-shrink-0 h-12 w-12 relative">
                         <Image
-                          src={product.images?.[0] || '/images/placeholder.png'}
+                          src={imageUrl}
                           alt={product.name}
                           fill
                           className="object-cover rounded-md"

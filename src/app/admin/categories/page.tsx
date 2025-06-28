@@ -33,9 +33,7 @@ async function fetchCategories() {
   const url = `${fullBaseUrl}/api/categories?limit=100`;
 
   try {
-    const response = await fetch(url, {
-      next: { revalidate: 60 } // Revalidate every 60 seconds
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error('Failed to fetch categories');

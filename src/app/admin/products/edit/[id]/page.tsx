@@ -63,7 +63,31 @@ const EditProductPage: FC = () => {
           sku: product.sku,
           stock: product.stock.toString(),
           categoryId: product.category.id,
-          images: product.images || [],
+          images: (() => {
+            const rawImages = product.images;
+            if (!rawImages) {
+              return [];
+            }
+            if (Array.isArray(rawImages)) {
+              return rawImages.map((img: any) => {
+                try {
+                  const parsed = JSON.parse(img);
+                  return Array.isArray(parsed) && parsed.length > 0 ? parsed[0] : parsed;
+                } catch {
+                  return img;
+                }
+              }).filter(Boolean);
+            }
+            if (typeof rawImages === 'string') {
+              try {
+                const parsed = JSON.parse(rawImages);
+                return Array.isArray(parsed) ? parsed : [parsed];
+              } catch {
+                return [rawImages];
+              }
+            }
+            return [];
+          })(),
           isFeatured: product.isFeatured,
           status: product.status,
           // NEW: Commission fields

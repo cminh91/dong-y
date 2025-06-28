@@ -133,3 +133,44 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+
+    // Basic validation (you might want more robust validation)
+    if (!body.name || !body.price || !body.categoryId) {
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: name, price, categoryId' },
+        { status: 400 }
+      );
+    }
+
+    const newProduct = await prisma.product.create({
+      data: {
+        name: body.name,
+        slug: body.slug || body.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''), // Generate slug if not provided
+        description: body.description || '',
+        content: body.content || '',
+        price: parseFloat(body.price),
+        salePrice: body.salePrice ? parseFloat(body.salePrice) : null,
+        sku: body.sku || null,
+        stock: body.stock ? parseInt(body.stock) : 0,
+        images: body.images ? JSON.stringify(body.images) : '[]',
+        categoryId: body.categoryId,
+        isFeatured: body.isFeatured || false,
+        status: body.status || 'published',
+        commissionRate: body.commissionRate ? parseFloat(body.commissionRate) : 0,
+        allowAffiliate: body.allowAffiliate || false,
+      },
+    });
+
+    return NextResponse.json({ success: true, data: newProduct }, { status: 201 });
+  } catch (error) {
+    console.error('Error creating product:', error);
+    return NextResponse.json(
+      { success: false, error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

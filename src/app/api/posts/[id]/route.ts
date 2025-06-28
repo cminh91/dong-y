@@ -108,6 +108,7 @@ export async function PUT(
         updateData.publishedAt = null;
       }
     }
+    if (body.categoryId !== undefined) updateData.categoryId = body.categoryId === '' ? null : body.categoryId;
 
     const updatedPost = await prisma.post.update({
       where: { id },

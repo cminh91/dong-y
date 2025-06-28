@@ -21,8 +21,28 @@ export default function EditPostPage() {
     image: '',
     status: 'DRAFT',
     authorName: '',
+    categoryId: '',
     publishedAt: ''
   });
+
+  const [categories, setCategories] = useState<Array<{id: string, name: string}>>([]);
+
+  // Fetch categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/post-categories?limit=100');
+        const data = await response.json();
+        if (data.success) {
+          setCategories(data.data.categories);
+        }
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   // Fetch post data
   useEffect(() => {
@@ -41,6 +61,7 @@ export default function EditPostPage() {
             image: post.image || '',
             status: post.status,
             authorName: post.authorName,
+            categoryId: post.categoryId || '',
             publishedAt: post.publishedAt ? new Date(post.publishedAt).toISOString().slice(0, 16) : ''
           });
         } else {
@@ -103,6 +124,7 @@ export default function EditPostPage() {
           excerpt: formData.excerpt,
           image: formData.image,
           status: formData.status,
+          categoryId: formData.categoryId || null,
           publishedAt: formData.status === 'PUBLISHED' ? (formData.publishedAt || new Date().toISOString()) : null
         }),
       });
@@ -197,45 +219,58 @@ export default function EditPostPage() {
                   Không thể thay đổi tác giả khi chỉnh sửa bài viết
                 </p>
               </div>
-
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Danh mục</label>
+              <select
+                name="categoryId"
+                value={formData.categoryId}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="">-- Chọn danh mục --</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              >
+                <option value="DRAFT">Nháp</option>
+                <option value="PUBLISHED">Đã đăng</option>
+                <option value="ARCHIVED">Lưu trữ</option>
+              </select>
+            </div>
+            {formData.status === 'PUBLISHED' && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái</label>
-                <select
-                  name="status"
-                  value={formData.status}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Ngày đăng</label>
+                <input
+                  type="datetime-local"
+                  name="publishedAt"
+                  value={formData.publishedAt}
                   onChange={handleChange}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="DRAFT">Nháp</option>
-                  <option value="PUBLISHED">Đã đăng</option>
-                  <option value="ARCHIVED">Lưu trữ</option>
-                </select>
-              </div>
-
-              {formData.status === 'PUBLISHED' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ngày đăng</label>
-                  <input
-                    type="datetime-local"
-                    name="publishedAt"
-                    value={formData.publishedAt}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  />
-                </div>
-              )}
-
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label>
-                <textarea
-                  name="excerpt"
-                  value={formData.excerpt}
-                  onChange={handleChange}
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Mô tả ngắn về bài viết"
                 />
               </div>
+            )}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả ngắn</label>
+              <textarea
+                name="excerpt"
+                value={formData.excerpt}
+                onChange={handleChange}
+                rows={3}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="Mô tả ngắn về bài viết"
+              />
             </div>
           </div>
         </div>
