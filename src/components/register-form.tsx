@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Upload, Gift } from 'lucide-react'
-import { toast } from "sonner"
+import toast from "react-hot-toast"
 import { registerAction } from "@/lib/auth-actions"
 
 import { Button } from "@/components/ui/button"
@@ -364,7 +364,7 @@ export function RegisterForm() {
         if (result.field) {
           setErrors({ [result.field]: result.error });
         } else {
-          toast.error(result.error);
+          toast.error(result.error || "Đã có lỗi xảy ra.");
         }
       }
     } catch (error) {

@@ -56,14 +56,25 @@ const TinyMCEEditor: FC<TinyMCEEditorProps> = ({
           });
         },
         // Image upload settings
-        images_upload_handler: (blobInfo: any) => {
-          return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              resolve(reader.result as string);
-            };
-            reader.readAsDataURL(blobInfo.blob());
-          });
+        images_upload_handler: (blobInfo: any, success: (url: string) => void, failure: (err: string) => void) => {
+          const formData = new FormData();
+          formData.append('files', blobInfo.blob(), blobInfo.filename());
+
+          fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+            .then(res => res.json())
+            .then(result => {
+              if (result.success && result.data?.files?.length > 0) {
+                success(result.data.files[0].url);
+              } else {
+                failure(result.error || 'Upload failed');
+              }
+            })
+            .catch(() => {
+              failure('Image upload failed');
+            });
         },
         paste_data_images: true,
         paste_as_text: false,

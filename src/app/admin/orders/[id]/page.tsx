@@ -50,12 +50,6 @@ const OrderDetailPage: FC = () => {
   
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [newStatus, setNewStatus] = useState('');
-  const [newPaymentStatus, setNewPaymentStatus] = useState('');
-  const [trackingNumber, setTrackingNumber] = useState('');
-  const [adminNotes, setAdminNotes] = useState('');
 
   // Fetch order details
   const fetchOrder = async () => {
@@ -68,10 +62,25 @@ const OrderDetailPage: FC = () => {
       console.log('API result:', result);
 
       if (result.success) {
-        setOrder(result.data.order);
-        setNewStatus(result.data.order.status);
-        setNewPaymentStatus(result.data.order.paymentStatus);
-        setTrackingNumber(result.data.order.trackingNumber || '');
+        const orderData = result.data.order;
+        // Safely parse product images which might be a JSON string
+        if (orderData.orderItems) {
+          orderData.orderItems.forEach((item: OrderDetail['orderItems'][0]) => {
+            if (item.product && typeof item.product.images === 'string') {
+              try {
+                const parsedImages = JSON.parse(item.product.images);
+                item.product.images = Array.isArray(parsedImages) ? parsedImages : [];
+              } catch (e) {
+                console.error("Failed to parse product images:", item.product.images, e);
+                item.product.images = [];
+              }
+            } else if (item.product && !item.product.images) {
+              item.product.images = [];
+            }
+          });
+        }
+
+        setOrder(orderData);
       } else {
         console.error('Failed to fetch order:', result.error);
         alert('Không thể tải thông tin đơn hàng: ' + (result.error || 'Unknown error'));
@@ -90,38 +99,6 @@ const OrderDetailPage: FC = () => {
     }
   }, [orderId]);
 
-  // Handle status update
-  const handleUpdateOrder = async () => {
-    try {
-      setUpdating(true);
-      const response = await fetch(`/api/admin/orders/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: newStatus,
-          paymentStatus: newPaymentStatus,
-          trackingNumber: trackingNumber || null,
-          adminNote: adminNotes || null
-        })
-      });
-
-      const result = await response.json();
-      if (result.success) {
-        setOrder(result.data.order);
-        setShowStatusModal(false);
-        alert('Cập nhật đơn hàng thành công!');
-      } else {
-        alert('Lỗi: ' + result.error);
-      }
-    } catch (error) {
-      console.error('Error updating order:', error);
-      alert('Có lỗi xảy ra khi cập nhật đơn hàng');
-    } finally {
-      setUpdating(false);
-    }
-  };
 
   // Get status color
   const getStatusColor = (status: string): string => {
@@ -192,17 +169,6 @@ const OrderDetailPage: FC = () => {
             ← Quay lại danh sách đơn hàng
           </Link>
           <h1 className="text-2xl font-bold mt-2">Chi tiết đơn hàng #{order.orderNumber}</h1>
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setShowStatusModal(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm"
-          >
-            Cập nhật trạng thái
-          </button>
-          <button className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 text-sm">
-            In đơn hàng
-          </button>
         </div>
       </div>
 
@@ -354,79 +320,6 @@ const OrderDetailPage: FC = () => {
         </div>
       </div>
 
-      {/* Status Update Modal */}
-      {showStatusModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Cập nhật trạng thái đơn hàng</h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái đơn hàng</label>
-                <select
-                  value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="PENDING">Chờ xử lý</option>
-                  <option value="CONFIRMED">Đã xác nhận</option>
-                  <option value="PROCESSING">Đang xử lý</option>
-                  <option value="SHIPPING">Đang giao</option>
-                  <option value="DELIVERED">Đã giao</option>
-                  <option value="CANCELLED">Đã hủy</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Trạng thái thanh toán</label>
-                <select
-                  value={newPaymentStatus}
-                  onChange={(e) => setNewPaymentStatus(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="PENDING">Chờ thanh toán</option>
-                  <option value="PAID">Đã thanh toán</option>
-                  <option value="FAILED">Thất bại</option>
-                  <option value="REFUNDED">Đã hoàn tiền</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mã vận đơn</label>
-                <input
-                  type="text"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Nhập mã vận đơn..."
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ghi chú admin</label>
-                <textarea
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  placeholder="Ghi chú thêm..."
-                  rows={3}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-            <div className="flex space-x-3 mt-6">
-              <button
-                onClick={handleUpdateOrder}
-                disabled={updating}
-                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 disabled:opacity-50"
-              >
-                {updating ? 'Đang cập nhật...' : 'Cập nhật'}
-              </button>
-              <button
-                onClick={() => setShowStatusModal(false)}
-                className="flex-1 bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
-              >
-                Hủy
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

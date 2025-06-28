@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Eye, EyeOff, AlertCircle } from "lucide-react";
-import { toast } from "sonner";
+import toast from "react-hot-toast";
 import { loginAction } from "@/lib/auth-actions";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
-  const [apiError, setApiError] = useState<string | null>(null);
 
   const validateForm = (email: string, password: string): boolean => {
     const newErrors: FormErrors = {};
@@ -50,7 +49,6 @@ export function LoginForm() {
     e.preventDefault();
     setLoading(true);
     setErrors({});
-    setApiError(null);
 
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
@@ -61,27 +59,22 @@ export function LoginForm() {
       return;
     }
 
-    try {
-      await loginAction(formData);
-      toast.success("Đăng nhập thành công");
-    } catch (error) {
-      console.error("Login error:", error);
-      setApiError(error instanceof Error ? error.message : "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại sau.");
-    } finally {
-      setLoading(false);
+    const result = await loginAction(formData);
+    setLoading(false);
+
+    if (result && !result.success) {
+      toast.error(result.error);
+      // If the server returns a specific field error, update the errors state
+      if (result.field) {
+        setErrors((prev) => ({ ...prev, [result.field!]: result.error }));
+      }
     }
+    // No 'else' block is needed because a successful login triggers a server-side redirect,
+    // so this component will unmount. The success toast is unreachable.
   };
 
   return (
     <div className="space-y-6">
-      {apiError && (
-        <Alert variant="destructive" className="bg-red-50">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription className="text-red-800">
-            {apiError}
-          </AlertDescription>
-        </Alert>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">

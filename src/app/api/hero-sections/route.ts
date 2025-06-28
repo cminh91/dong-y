@@ -90,19 +90,21 @@ export async function PUT(req: NextRequest) {
     }
 
     let updatedSection;
+    // Ensure value is stored as a string if it's an object/array
+    const valueAsString = (value && typeof value === 'object') ? JSON.stringify(value) : value;
     
     if (key) {
       // Update by key (for hero_main)
       updatedSection = await prisma.systemSetting.upsert({
         where: { key },
         update: {
-          ...(value && { value }),
+          ...(valueAsString !== undefined && { value: valueAsString }),
           ...(description !== undefined && { description }),
           updatedAt: new Date()
         },
         create: {
           key,
-          value,
+          value: valueAsString || '[]',
           description: description || 'Hero section data',
           category: 'homepage'
         }
@@ -113,7 +115,7 @@ export async function PUT(req: NextRequest) {
         where: { id },
         data: {
           ...(key && { key }),
-          ...(value && { value }),
+          ...(valueAsString !== undefined && { value: valueAsString }),
           ...(description !== undefined && { description }),
           updatedAt: new Date()
         }

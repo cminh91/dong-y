@@ -100,6 +100,10 @@ const ImageUpload: FC<{
   const [previewUrl, setPreviewUrl] = useState(currentImage || '');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    setPreviewUrl(currentImage || '');
+  }, [currentImage]);
+
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
@@ -133,7 +137,7 @@ const ImageUpload: FC<{
       const result = await response.json();
 
       if (result.success && result.data?.files?.length > 0) {
-        const uploadedUrl = result.data.files[0].secure_url;
+        const uploadedUrl = result.data.files[0].url;
         setPreviewUrl(uploadedUrl);
         onImageChange(uploadedUrl);
       } else {
@@ -227,26 +231,37 @@ const HeroSectionAdmin: FC = () => {
       const response = await fetch('/api/hero-sections');
       if (response.ok) {
         const result = await response.json();
+        console.log("API Response:", JSON.stringify(result, null, 2));
+
         if (result.success && result.data && result.data.length > 0) {
-          // Tìm hero_main setting
           const heroMainSetting = result.data.find((item: any) => item.key === 'hero_main');
+          console.log("Found hero_main setting:", JSON.stringify(heroMainSetting, null, 2));
+
           if (heroMainSetting) {
             let heroData;
             try {
+              console.log("Value to be parsed:", heroMainSetting.value);
+              console.log("Type of value:", typeof heroMainSetting.value);
+
               heroData = typeof heroMainSetting.value === 'string' 
                 ? JSON.parse(heroMainSetting.value) 
                 : heroMainSetting.value;
+              
+              console.log("Parsed heroData:", JSON.stringify(heroData, null, 2));
+
             } catch (e) {
               console.error('Error parsing hero data:', e);
               heroData = [];
             }
             
-            setHeroSection({
+            const finalHeroSection = {
               ...heroMainSetting,
               value: Array.isArray(heroData) ? heroData : []
-            });
+            };
+            console.log("Final state to be set:", JSON.stringify(finalHeroSection, null, 2));
+            setHeroSection(finalHeroSection);
           } else {
-            // Nếu chưa có hero_main, tạo một object rỗng
+            console.log("No 'hero_main' setting found. Initializing empty state.");
             setHeroSection({
               id: '',
               key: 'hero_main',
@@ -255,6 +270,7 @@ const HeroSectionAdmin: FC = () => {
             });
           }
         } else {
+          console.log("API request was successful, but no data was returned. Initializing empty state.");
           setHeroSection({
             id: '',
             key: 'hero_main',
@@ -263,7 +279,7 @@ const HeroSectionAdmin: FC = () => {
           });
         }
       } else {
-        console.error('Failed to fetch hero section');
+        console.error('Failed to fetch hero section, status:', response.status);
       }
     } catch (error) {
       console.error('Error fetching hero section:', error);
@@ -402,8 +418,8 @@ const HeroSectionAdmin: FC = () => {
   return (
     <div className="container mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Quản lý Hero Section</h1>
-        <p className="text-gray-600">Chỉnh sửa nội dung Hero Section hiển thị trên trang chủ</p>
+        <h1 className="text-3xl font-bold mb-2">Quản lý Banner Section</h1>
+        <p className="text-gray-600">Chỉnh sửa nội dung Banner Section hiển thị trên trang chủ</p>
       </div>
 
       <Tabs defaultValue="manage" className="w-full">
@@ -417,9 +433,9 @@ const HeroSectionAdmin: FC = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <div>
-                  <CardTitle>Danh sách Hero Items</CardTitle>
+                  <CardTitle>Danh sách Banner</CardTitle>
                   <CardDescription>
-                    Quản lý các item hiển thị trong Hero Section
+                    Quản lý các Banner 
                   </CardDescription>
                 </div>
                 <Button onClick={() => setShowForm(!showForm)} variant="outline">
@@ -433,7 +449,7 @@ const HeroSectionAdmin: FC = () => {
                 <Card className="mb-6">
                   <CardHeader>
                     <CardTitle>
-                      {editingItem ? 'Chỉnh sửa Hero Item' : 'Thêm Hero Item mới'}
+                      {editingItem ? 'Chỉnh sửa Banner Item' : 'Thêm Banner Item mới'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -444,7 +460,7 @@ const HeroSectionAdmin: FC = () => {
                           id="name"
                           value={formData.name}
                           onChange={(e) => setFormData({...formData, name: e.target.value})}
-                          placeholder="Nhập tiêu đề hero section"
+                          placeholder="Nhập tiêu đề banner section"
                           required
                         />
                       </div>
@@ -452,7 +468,7 @@ const HeroSectionAdmin: FC = () => {
                       <ImageUpload
                         currentImage={formData.image}
                         onImageChange={(url) => setFormData({...formData, image: url})}
-                        label="Ảnh Hero Section"
+                        label="Ảnh Banner Section"
                       />
 
                       <div>
@@ -461,7 +477,7 @@ const HeroSectionAdmin: FC = () => {
                           id="description"
                           value={formData.description}
                           onChange={(e) => setFormData({...formData, description: e.target.value})}
-                          placeholder="Nhập mô tả hero section"
+                          placeholder="Nhập mô tả banner section"
                           rows={3}
                           required
                         />
@@ -531,10 +547,10 @@ const HeroSectionAdmin: FC = () => {
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <p className="text-gray-500 mb-4">Chưa có hero item nào</p>
+                    <p className="text-gray-500 mb-4">Chưa có banner item nào</p>
                     <Button onClick={() => setShowForm(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Thêm hero item đầu tiên
+                      Thêm banner item đầu tiên
                     </Button>
                   </div>
                 )}
@@ -548,10 +564,10 @@ const HeroSectionAdmin: FC = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Eye className="h-5 w-5" />
-                Xem trước Hero Section
+                Xem trước Banner Section
               </CardTitle>
               <CardDescription>
-                Xem trước Hero Section như hiển thị trên trang chủ
+                Xem trước Banner Section như hiển thị trên trang chủ
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">

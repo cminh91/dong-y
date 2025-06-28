@@ -104,7 +104,7 @@ const AdminSidebar: FC<{ children?: ReactNode }> = () => {
       permission: 'homepage.view',
       children: [
         { title: 'Tổng quan', path: '/admin/homepage', icon: 'fas fa-eye', permission: 'homepage.view' },
-        { title: 'Hero Section', path: '/admin/homepage/hero', icon: 'fas fa-image', permission: 'homepage.hero' },
+        { title: 'Banner', path: '/admin/homepage/hero', icon: 'fas fa-image', permission: 'homepage.hero' },
         { title: 'Giới thiệu', path: '/admin/homepage/about', icon: 'fas fa-info-circle', permission: 'homepage.about' },
         { title: 'Lợi ích', path: '/admin/homepage/benefits', icon: 'fas fa-star', permission: 'homepage.benefits' },
         { title: 'Đánh giá', path: '/admin/homepage/testimonials', icon: 'fas fa-quote-left', permission: 'homepage.testimonials' },

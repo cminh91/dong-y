@@ -29,64 +29,73 @@ const registerSchema = z.object({
 })
 
 export async function loginAction(formData: FormData) {
+  let user;
   try {
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
 
     // Validate input
-    const validatedData = loginSchema.parse({ email, password })
+    const validatedData = loginSchema.parse({ email, password });
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: validatedData.email }
-    })
+    user = await prisma.user.findUnique({
+      where: { email: validatedData.email },
+    });
 
     if (!user) {
-      throw new Error('Email hoặc mật khẩu không đúng')
+      return { success: false, error: 'Email hoặc mật khẩu không đúng' };
     }
 
     // Verify password
-    const isValidPassword = await verifyPassword(validatedData.password, user.password)
+    const isValidPassword = await verifyPassword(
+      validatedData.password,
+      user.password
+    );
     if (!isValidPassword) {
-      throw new Error('Email hoặc mật khẩu không đúng')
+      return { success: false, error: 'Email hoặc mật khẩu không đúng' };
     }
 
     // Check if user is active
     if (user.status !== 'ACTIVE') {
-      throw new Error('Tài khoản chưa được kích hoạt hoặc đã bị khóa')
+      return { success: false, error: 'Tài khoản chưa được kích hoạt hoặc đã bị khóa' };
     }
-
-    // Generate JWT token
-    const token = generateToken({
-      userId: user.id,
-      email: user.email,
-      role: user.role
-    })    // Set cookie
-    const cookieStore = await cookies()
-    cookieStore.set('authToken', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 // 7 days
-    })    // Redirect based on role
-    if (['ADMIN', 'STAFF'].includes(user.role)) {
-      // Admin và Staff được vào trang admin
-      redirect('/admin')
-    } else {
-      // Các role khác (CUSTOMER, COLLABORATOR, AGENT) về trang tài khoản
-      redirect('/tai-khoan')
-    }
-
   } catch (error) {
     if (error instanceof z.ZodError) {
-      throw new Error(error.errors[0].message)
+      return {
+        success: false,
+        error: error.errors[0].message,
+        field: error.errors[0].path[0] as string,
+      };
     }
 
-    if (error instanceof Error) {
-      throw error
-    }
+    console.error('Login Action Error:', error); // Log the actual error on the server
+    return { success: false, error: 'Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.' };
+  }
 
-    throw new Error('Có lỗi xảy ra khi đăng nhập')
+  // --- Success Path ---
+  // If we reach here, user is authenticated and active.
+
+  // Generate JWT token
+  const token = generateToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role,
+  });
+
+  // Set cookie
+  const cookieStore = await cookies();
+  cookieStore.set('authToken', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 7 * 24 * 60 * 60, // 7 days
+  });
+
+  // Redirect based on role
+  if (['ADMIN', 'STAFF'].includes(user.role)) {
+    redirect('/admin');
+  } else {
+    redirect('/tai-khoan');
   }
 }
 
