@@ -223,8 +223,9 @@ export async function POST(request: NextRequest) {
       if (!existing) isUnique = true
     }
 
-    // Hash password (you should implement proper password hashing)
-    const hashedPassword = password // TODO: Implement bcrypt hashing
+    // Hash password
+    const bcrypt = require('bcryptjs');
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     // Create user
     const user = await prisma.user.create({

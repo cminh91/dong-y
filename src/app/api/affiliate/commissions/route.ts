@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const status = searchParams.get('status'); // 'PENDING', 'APPROVED', 'PAID'
+    const status = searchParams.get('status'); // 'PENDING', 'PAID', 'CANCELLED'
     const period = searchParams.get('period') || '30'; // days
     const linkId = searchParams.get('linkId');
 
@@ -174,8 +174,8 @@ export async function GET(request: NextRequest) {
         },
         summary: {
           pending: summaryTotals.pending || { amount: 0, count: 0 },
-          approved: summaryTotals.approved || { amount: 0, count: 0 },
           paid: summaryTotals.paid || { amount: 0, count: 0 },
+          cancelled: summaryTotals.cancelled || { amount: 0, count: 0 },
           total: {
             amount: Number(user?.totalCommission || 0),
             available: Number(user?.availableBalance || 0),

@@ -109,14 +109,14 @@ export async function POST(
       }
 
       // Calculate commission
-      const commissionAmount = (orderValue * affiliateLink.commissionRate) / 100;
+      const commissionAmount = orderValue * Number(affiliateLink.commissionRate);
 
       const conversion = await prisma.affiliateConversion.create({
         data: {
           affiliateLinkId: affiliateLink.id,
           orderId,
           orderValue,
-          commissionRate: affiliateLink.commissionRate,
+          commissionRate: Number(affiliateLink.commissionRate),
           commissionAmount,
           convertedAt: new Date()
         }
@@ -130,7 +130,7 @@ export async function POST(
             increment: 1
           },
           totalCommission: {
-            increment: commissionAmount
+            increment: Number(commissionAmount)
           },
           lastConversionAt: new Date()
         }

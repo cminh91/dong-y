@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       where.OR = [
-        { name: { contains: search } },
+        { fullName: { contains: search } },
         { email: { contains: search } },
-        { phone: { contains: search } }
+        { phoneNumber: { contains: search } }
       ];
     }
 
@@ -39,9 +39,9 @@ export async function GET(request: NextRequest) {
         where,
         select: {
           id: true,
-          name: true,
+          fullName: true,
           email: true,
-          phone: true,
+          phoneNumber: true,
           role: true,
           status: true,
           createdAt: true,
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           id: existingUser.id,
-          name: existingUser.name,
+          fullName: existingUser.fullName,
           email: existingUser.email,
           role: existingUser.role,
           status: existingUser.status,

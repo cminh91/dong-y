@@ -270,8 +270,25 @@ export async function DELETE(
       );
     }
 
-    await prisma.product.delete({
-      where: { id }
+    // Sử dụng transaction để đảm bảo tính nhất quán
+    await prisma.$transaction(async (tx) => {
+      // Xóa các affiliate links liên quan (nếu có)
+      await tx.affiliateLink.deleteMany({
+        where: { productId: id }
+      });
+
+      // Xóa các commissions liên quan (nếu có)
+      await tx.commission.deleteMany({
+        where: { productId: id }
+      });
+
+      // CartItems sẽ tự động xóa do có onDelete: Cascade
+      // OrderItems sẽ có productId = null do có onDelete: SetNull, nhưng vẫn giữ productName và productSku
+
+      // Cuối cùng xóa sản phẩm
+      await tx.product.delete({
+        where: { id }
+      });
     });
 
     return NextResponse.json({

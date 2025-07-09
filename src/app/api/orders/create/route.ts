@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
           id: { in: productIds },
           status: 'ACTIVE'
         },
-        select: { id: true, name: true, stock: true }
+        select: { id: true, name: true, sku: true, stock: true }
       });
 
       // Verify all products still exist and have stock
@@ -262,9 +262,12 @@ export async function POST(request: NextRequest) {
       // Debug: Log order creation data
       const orderItemsData = validatedData.items.map(item => {
         const productId = item.productId || item.id;
+        const product = products.find(p => p.id === productId);
         console.log(`Preparing order item: productId=${productId}, price=${item.price}, quantity=${item.quantity}`);
         return {
           productId: productId,
+          productName: product?.name || item.name, // Store product name at time of order
+          productSku: product?.sku || `SKU-${productId}`, // Store product SKU at time of order
           price: item.price,
           quantity: item.quantity
         };

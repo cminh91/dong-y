@@ -282,7 +282,7 @@ const AddProductPage: FC = () => {
                 <TinyMCEEditor
                   value={formData.content}
                   onEditorChange={(content) => setFormData(prev => ({ ...prev, content }))}
-                  height={300}
+                  height={600}
                   placeholder="Nhập nội dung chi tiết về sản phẩm..."
                 />
               </div>

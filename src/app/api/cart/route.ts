@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     if (product.stock < quantity) {
       return NextResponse.json(
-        { success: false, message: 'Không đủ hàng trong kho' },
+        { success: false, message: `Chỉ còn ${product.stock} sản phẩm trong kho` },
         { status: 400 }
       );
     }
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
       
       if (newQuantity > product.stock) {
         return NextResponse.json(
-          { success: false, message: `Chỉ còn ${product.stock} sản phẩm trong kho` },
+          { success: false, message: `Số lượng vượt quá tồn kho. Chỉ còn ${product.stock} sản phẩm` },
           { status: 400 }
         );
       }

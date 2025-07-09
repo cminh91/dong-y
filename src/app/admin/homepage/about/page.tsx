@@ -10,6 +10,7 @@ import { apiClient } from '@/lib/api-client';
 import { SystemSetting } from '@/types/api';
 import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ImageUpload from '@/components/admin/ImageUpload';
 
 interface AboutSectionData {
   title: string;
@@ -35,7 +36,7 @@ const AboutSectionAdmin: FC = () => {
     image2: '',
     stats: [{ label: '', value: '' }]
   });
-  const [uploading, setUploading] = useState<{ [key: string]: boolean }>({});
+
 
   const toast = ({ title, description, variant }: { title: string; description: string; variant?: string }) => {
     alert(`${title}: ${description}`);
@@ -136,43 +137,13 @@ const AboutSectionAdmin: FC = () => {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'image1' | 'image2') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Handler cho ImageUpload component
+  const handleImage1Change = (images: string[]) => {
+    setFormData(prev => ({ ...prev, image1: images[0] || '' }));
+  };
 
-    setUploading(prev => ({ ...prev, [field]: true }));
-
-    const apiFormData = new FormData();
-    apiFormData.append('files', file);
-    apiFormData.append('folder', 'about_page');
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: apiFormData,
-      });
-
-      const result = await response.json();
-
-      if (result.success && result.data.files.length > 0) {
-        const imageUrl = result.data.files[0].secure_url;
-        setFormData(prev => ({ ...prev, [field]: imageUrl }));
-        toast({
-          title: 'Thành công',
-          description: 'Tải ảnh lên thành công.',
-        });
-      } else {
-        throw new Error(result.error || 'Tải ảnh lên thất bại.');
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Lỗi',
-        description: error.message || 'Không thể tải ảnh lên.',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(prev => ({ ...prev, [field]: false }));
-    }
+  const handleImage2Change = (images: string[]) => {
+    setFormData(prev => ({ ...prev, image2: images[0] || '' }));
   };
   const addStat = () => {
     setFormData({
@@ -293,63 +264,29 @@ const AboutSectionAdmin: FC = () => {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <Label htmlFor="image1">Ảnh 1</Label>
-                    <Input
-                      id="image1"
-                      type="file"
-                      onChange={(e) => handleImageUpload(e, 'image1')}
-                      className="mb-2"
-                      accept="image/*"
-                      disabled={uploading.image1}
+                    <Label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ảnh 1
+                    </Label>
+                    <ImageUpload
+                      images={formData.image1 ? [formData.image1] : []}
+                      onImagesChange={handleImage1Change}
+                      maxImages={1}
+                      folder="about-sections"
                     />
-                    {uploading.image1 && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                        <span>Đang tải lên...</span>
-                      </div>
-                    )}
-                    {formData.image1 && !uploading.image1 && (
-                      <div className="mt-2">
-                        <img src={formData.image1} alt="Xem trước ảnh 1" className="w-full h-32 object-cover rounded-md border" />
-                        <Input
-                          type="text"
-                          value={formData.image1}
-                          readOnly
-                          className="mt-1 text-xs text-gray-500 bg-gray-100"
-                        />
-                      </div>
-                    )}
                   </div>
 
                   <div>
-                    <Label htmlFor="image2">Ảnh 2</Label>
-                    <Input
-                      id="image2"
-                      type="file"
-                      onChange={(e) => handleImageUpload(e, 'image2')}
-                      className="mb-2"
-                      accept="image/*"
-                      disabled={uploading.image2}
+                    <Label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ảnh 2
+                    </Label>
+                    <ImageUpload
+                      images={formData.image2 ? [formData.image2] : []}
+                      onImagesChange={handleImage2Change}
+                      maxImages={1}
+                      folder="about-sections"
                     />
-                    {uploading.image2 && (
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
-                        <span>Đang tải lên...</span>
-                      </div>
-                    )}
-                    {formData.image2 && !uploading.image2 && (
-                      <div className="mt-2">
-                        <img src={formData.image2} alt="Xem trước ảnh 2" className="w-full h-32 object-cover rounded-md border" />
-                        <Input
-                          type="text"
-                          value={formData.image2}
-                          readOnly
-                          className="mt-1 text-xs text-gray-500 bg-gray-100"
-                        />
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -515,18 +452,39 @@ const AboutPreview: FC<{ aboutData: AboutSectionData }> = ({ aboutData }) => {
           </div>
           <div className="md:w-1/2">
             <div className="grid grid-cols-2 gap-4">
-              <img
-                src={aboutData.image1}
-                alt="Ảnh 1"
-                className="rounded-lg shadow-lg"
-                style={{ width: '300px', height: '200px', objectFit: 'cover' }}
-              />
-              <img
-                src={aboutData.image2}
-                alt="Ảnh 2"
-                className="rounded-lg shadow-lg mt-8"
-                style={{ width: '300px', height: '200px', objectFit: 'cover' }}
-              />
+              {aboutData.image1 && (
+                <img
+                  src={aboutData.image1}
+                  alt="Ảnh 1"
+                  className="rounded-lg shadow-lg"
+                  style={{ width: '300px', height: '200px', objectFit: 'cover' }}
+                />
+              )}
+              {!aboutData.image1 && (
+                <div
+                  className="rounded-lg shadow-lg bg-gray-200 flex items-center justify-center"
+                  style={{ width: '300px', height: '200px' }}
+                >
+                  <span className="text-gray-500">Chưa có ảnh</span>
+                </div>
+              )}
+
+              {aboutData.image2 && (
+                <img
+                  src={aboutData.image2}
+                  alt="Ảnh 2"
+                  className="rounded-lg shadow-lg mt-8"
+                  style={{ width: '300px', height: '200px', objectFit: 'cover' }}
+                />
+              )}
+              {!aboutData.image2 && (
+                <div
+                  className="rounded-lg shadow-lg bg-gray-200 flex items-center justify-center mt-8"
+                  style={{ width: '300px', height: '200px' }}
+                >
+                  <span className="text-gray-500">Chưa có ảnh</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

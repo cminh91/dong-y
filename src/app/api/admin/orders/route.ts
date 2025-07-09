@@ -292,6 +292,8 @@ export async function POST(request: NextRequest) {
 
       orderItems.push({
         productId: item.productId,
+        productName: product.name, // Store product name at time of order
+        productSku: product.sku, // Store product SKU at time of order
         quantity: item.quantity,
         price: product.price
       });

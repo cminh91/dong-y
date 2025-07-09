@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         images: body.images ? JSON.stringify(body.images) : '[]',
         categoryId: body.categoryId,
         isFeatured: body.isFeatured || false,
-        status: body.status || 'published',
+        status: body.status || 'ACTIVE',
         commissionRate: body.commissionRate ? parseFloat(body.commissionRate) : 0,
         allowAffiliate: body.allowAffiliate || false,
       },

@@ -75,14 +75,23 @@ const HeroPreview: FC<{ heroData: HeroSectionData[] }> = ({ heroData }) => {
         </div>
         <div className={`md:w-1/2 transition-opacity duration-500 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <div className="relative">
-            <Image
-              src={item.image}
-              alt={item.name}
-              className="rounded-lg shadow-xl w-full"
-              width={600}
-              height={400}
-              style={{ height: "auto" }}
-            />
+            {item.image && item.image.trim() !== '' ? (
+              <Image
+                src={item.image}
+                alt={item.name}
+                className="rounded-lg shadow-xl w-full"
+                width={600}
+                height={400}
+                style={{ height: "auto" }}
+              />
+            ) : (
+              <div
+                className="rounded-lg shadow-xl w-full bg-gray-200 flex items-center justify-center"
+                style={{ height: "400px" }}
+              >
+                <span className="text-gray-500">Chưa có ảnh</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -510,13 +519,22 @@ const HeroSectionAdmin: FC = () => {
                       <CardContent className="p-4">
                         <div className="flex items-start gap-4">
                           <div className="relative">
-                            <Image
-                              src={item.image}
-                              alt={item.name}
-                              width={120}
-                              height={80}
-                              className="rounded-md object-cover"
-                            />
+                            {item.image && item.image.trim() !== '' ? (
+                              <Image
+                                src={item.image}
+                                alt={item.name}
+                                width={120}
+                                height={80}
+                                className="rounded-md object-cover"
+                              />
+                            ) : (
+                              <div
+                                className="rounded-md bg-gray-200 flex items-center justify-center"
+                                style={{ width: "120px", height: "80px" }}
+                              >
+                                <span className="text-gray-500 text-xs">No image</span>
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1">
                             <h3 className="font-semibold text-lg mb-2">{item.name}</h3>
