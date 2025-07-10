@@ -28,6 +28,12 @@ type CartAction =
   | { type: 'LOAD_CART'; payload: CartItem[] }
   | { type: 'SET_PENDING_CHANGES'; payload: boolean };
 
+interface ServerCartItem {
+  id: string;
+  productId: string;
+  quantity: number;
+}
+
 interface CartContextType {
   state: CartState;
   addItem: (item: Omit<CartItem, 'quantity'>) => void;
@@ -310,15 +316,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const serverData = await serverResponse.json();
-      const serverItems = serverData.success ? serverData.data.items : [];
+      const serverItems: ServerCartItem[] = serverData.success ? serverData.data.items : [];
 
       // Create a map of server items for easy lookup
-      const serverItemsMap = new Map(
-        serverItems.map((item: any) => [item.productId, item])
+      const serverItemsMap = new Map<string, ServerCartItem>(
+        serverItems.map((item) => [item.productId, item])
       );
 
       // Sync each local item to server
       for (const localItem of state.items) {
+        if (!localItem.productId) continue; // Skip items without a productId
+
         const serverItem = serverItemsMap.get(localItem.productId);
 
         if (!serverItem) {

@@ -83,7 +83,28 @@ async function fetchProducts(searchParams: SearchParamsType): Promise<FetchProdu
     }
 
     const data = await response.json();
-    return data.success ? data.data : {
+
+    if (data.success && data.data.products) {
+      const productsWithParsedImages = data.data.products.map((product: any) => {
+        let images = product.images;
+        if (typeof images === 'string') {
+          try {
+            images = JSON.parse(images);
+          } catch (e) {
+            console.error(`Failed to parse images for product ${product.id}:`, images);
+            images = [];
+          }
+        }
+        return { ...product, images: Array.isArray(images) ? images : [] };
+      });
+
+      return {
+        ...data.data,
+        products: productsWithParsedImages,
+      };
+    }
+
+    return {
       products: [],
       pagination: {
         currentPage: 1,
@@ -91,8 +112,8 @@ async function fetchProducts(searchParams: SearchParamsType): Promise<FetchProdu
         totalCount: 0,
         hasNextPage: false,
         hasPrevPage: false,
-        limit: 12
-      }
+        limit: 12,
+      },
     };
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -107,6 +128,32 @@ async function fetchProducts(searchParams: SearchParamsType): Promise<FetchProdu
         limit: 12
       }
     };
+  }
+}
+
+// Fetch categories from API
+async function fetchCategories() {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = new URL('/api/product-categories-new', fullBaseUrl);
+
+  url.searchParams.set('status', 'ACTIVE');
+  url.searchParams.set('limit', '50');
+
+  try {
+    const response = await fetch(url.toString(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data = await response.json();
+    return data.success ? data.data : [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
   }
 }
 
@@ -129,7 +176,11 @@ const ProductsPage: FC<ProductsPageProps> = async ({ searchParams }) => {
   if (featured) searchParamsForAPI.featured = featured;
   searchParamsForAPI.limit = '12';
 
-  const { products, pagination } = await fetchProducts(searchParamsForAPI);
+  // Fetch products and categories
+  const [{ products, pagination }, categories] = await Promise.all([
+    fetchProducts(searchParamsForAPI),
+    fetchCategories()
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -142,22 +193,76 @@ const ProductsPage: FC<ProductsPageProps> = async ({ searchParams }) => {
         </ol>
       </nav>
 
-      {/* Header */}
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Sản phẩm</h1>
-          <p className="text-gray-600 mt-2">
-            Tìm thấy {pagination.totalCount || 0} sản phẩm
-            {search && ` cho "${search}"`}
-            {categorySlug && ` trong danh mục`}
-          </p>
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* Sidebar */}
+        <div className="md:w-1/4">
+          <div className="bg-white rounded-lg shadow p-6 sticky top-4">
+            <h2 className="text-xl font-bold mb-4">Danh mục sản phẩm</h2>
+            <div className="space-y-2">
+              {/* Tất cả sản phẩm */}
+              <Link
+                href="/san-pham"
+                className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${!categorySlug ? 'bg-green-50 text-green-700' : ''}`}
+              >
+                Tất cả sản phẩm
+              </Link>
+
+              {/* Danh mục từ API */}
+              {categories.map((category: any) => (
+                <Link
+                  key={category.id}
+                  href={`/san-pham?category=${category.slug}`}
+                  className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${categorySlug === category.slug ? 'bg-green-50 text-green-700' : ''}`}
+                >
+                  {category.name}
+                  {category._count?.products !== undefined && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({category._count.products})
+                    </span>
+                  )}
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-8">
+              <h2 className="text-xl font-bold mb-4">Tìm kiếm</h2>
+              <form method="GET" className="space-y-4">
+                <input
+                  type="text"
+                  name="search"
+                  defaultValue={search}
+                  placeholder="Tìm kiếm sản phẩm..."
+                  className="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+                {categorySlug && (
+                  <input type="hidden" name="category" value={categorySlug} />
+                )}
+                <button type="submit" className="btn-primary w-full py-2">
+                  Tìm kiếm
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
 
-        {/* Sort dropdown */}
-        <div className="flex items-center space-x-4">
-          <SortDropdown sortBy={sortBy} sortOrder={sortOrder} />
-        </div>
-      </div>
+        {/* Main content */}
+        <div className="md:w-3/4">
+          {/* Header */}
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Sản phẩm</h1>
+              <p className="text-gray-600 mt-2">
+                Tìm thấy {pagination.totalCount || 0} sản phẩm
+                {search && ` cho "${search}"`}
+                {categorySlug && ` trong danh mục`}
+              </p>
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="flex items-center space-x-4">
+              <SortDropdown sortBy={sortBy} sortOrder={sortOrder} />
+            </div>
+          </div>
 
       {/* Products Grid */}
       {products && products.length > 0 ? (
@@ -259,6 +364,8 @@ const ProductsPage: FC<ProductsPageProps> = async ({ searchParams }) => {
           </Link>
         </div>
       )}
+        </div>
+      </div>
     </div>
   );
 };

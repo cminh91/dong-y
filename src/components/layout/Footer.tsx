@@ -2,22 +2,36 @@
 
 import Link from 'next/link';
 import { FC } from 'react';
-import layoutData from '@/data/layout.json';
-import { FooterData } from '@/types/layout';
+import { CategoryWithChildren, SystemSetting } from '@/types/api';
 
-const Footer: FC<Partial<FooterData>> = (props) => {
-  const defaultProps = {
-    ...layoutData.footer,
-    ...props
-  };
+interface FooterProps {
+  productCategories?: CategoryWithChildren[];
+  contactInfo?: SystemSetting | null;
+  loading?: boolean;
+  error?: string | null;
+}
 
-  const {
-    companyTitle,
-    companyDescription,
-    contactInfo,
-    workingHours,
-    policies
-  } = defaultProps;
+const Footer: FC<FooterProps> = ({
+  productCategories = [],
+  contactInfo: apiContactInfo,
+  loading = false,
+  error = null
+}) => {
+  // API trả về object trực tiếp
+  const contactInfo = apiContactInfo || {};
+  console.log('Footer apiContactInfo:', apiContactInfo);
+  console.log('Footer contactInfo:', contactInfo);
+
+  // Default company info
+  const companyTitle = "Công ty TNHH Thương mại và Dịch vụ EVOSEA";
+  const companyDescription = "Chuyên cung cấp các sản phẩm chất lượng cao với dịch vụ tận tâm.";
+
+  const policies = [
+    { label: "Chính sách bảo mật", path: "/chinh-sach-bao-mat" },
+    { label: "Điều khoản sử dụng", path: "/dieu-khoan-su-dung" },
+    { label: "Chính sách đổi trả", path: "/chinh-sach-doi-tra" },
+    { label: "Hướng dẫn mua hàng", path: "/huong-dan-mua-hang" }
+  ];
 
   return (
     <footer className="relative overflow-hidden pt-16 pb-8">
@@ -59,13 +73,16 @@ const Footer: FC<Partial<FooterData>> = (props) => {
             <div>
               <h3 className="text-lg font-bold mb-4 text-primary">Danh mục sản phẩm</h3>
               <ul className="space-y-2">
-                {layoutData.header.productCategories.map((cat) => (
-                  <li key={cat.id}>
-                    <Link href={cat.path} className="text-gray-800 hover:text-primary">
-                      {cat.label}
+                {productCategories.slice(0, 6).map((category) => (
+                  <li key={category.id}>
+                    <Link href={`/san-pham/danh-muc/${category.slug}`} className="text-gray-800 hover:text-primary">
+                      {category.name}
                     </Link>
                   </li>
                 ))}
+                {productCategories.length === 0 && (
+                  <li className="text-gray-500 text-sm">Đang tải...</li>
+                )}
               </ul>
             </div>
           </div>
@@ -73,38 +90,46 @@ const Footer: FC<Partial<FooterData>> = (props) => {
           <div>
             <h3 className="text-lg font-bold mb-4 text-primary">Thông tin liên hệ</h3>
             <ul className="space-y-3">
-              <li className="flex items-start">
-                <i className="fas fa-map-marker-alt text-primary mt-1 mr-3"></i>
-                <span className="text-gray-800">{contactInfo.address}</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-phone-alt text-primary mr-3"></i>
-                <span className="text-gray-800">{contactInfo.phone.join(' - ')}</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-envelope text-primary mr-3"></i>
-                <span className="text-gray-800">{contactInfo.email}</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-globe text-primary mr-3"></i>
-                <span className="text-gray-800">{contactInfo.website}</span>
-              </li>
-              <li className="flex items-start">
-                <i className="fas fa-industry text-primary mt-1 mr-3"></i>
-                <span className="text-gray-800">Sản xuất tại: {contactInfo.manufacturer?.name}</span>
-              </li>
-              <li className="flex items-start">
-                <i className="fas fa-map-marked-alt text-primary mt-1 mr-3"></i>
-                <span className="text-gray-800">{contactInfo.manufacturer?.address}</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-flag text-primary mr-3"></i>
-                <span className="text-gray-800">Xuất xứ: {contactInfo.origin}</span>
-              </li>
-              <li className="flex items-center">
-                <i className="fas fa-clock text-primary mr-3"></i>
-                <span className="text-gray-800">{workingHours}</span>
-              </li>
+              {(contactInfo as any)?.address && (
+                <li className="flex items-start">
+                  <i className="fas fa-map-marker-alt text-primary mt-1 mr-3"></i>
+                  <span className="text-gray-800">{(contactInfo as any).address}</span>
+                </li>
+              )}
+              {(contactInfo as any)?.phone && (
+                <li className="flex items-center">
+                  <i className="fas fa-phone-alt text-primary mr-3"></i>
+                  <span className="text-gray-800">{(contactInfo as any).phone}</span>
+                </li>
+              )}
+              {(contactInfo as any)?.email && (
+                <li className="flex items-center">
+                  <i className="fas fa-envelope text-primary mr-3"></i>
+                  <span className="text-gray-800">{(contactInfo as any).email}</span>
+                </li>
+              )}
+              {(contactInfo as any)?.workingHours && (
+                <li className="flex items-center">
+                  <i className="fas fa-clock text-primary mr-3"></i>
+                  <span className="text-gray-800">{(contactInfo as any).workingHours}</span>
+                </li>
+              )}
+              {(contactInfo as any)?.facebookUrl && (
+                <li className="flex items-center">
+                  <i className="fab fa-facebook text-primary mr-3"></i>
+                  <a href={(contactInfo as any).facebookUrl} target="_blank" rel="noopener noreferrer" className="text-gray-800 hover:text-primary">
+                    Facebook
+                  </a>
+                </li>
+              )}
+              {(contactInfo as any)?.youtubeUrl && (
+                <li className="flex items-center">
+                  <i className="fab fa-youtube text-primary mr-3"></i>
+                  <a href={(contactInfo as any).youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-gray-800 hover:text-primary">
+                    YouTube
+                  </a>
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -114,8 +139,8 @@ const Footer: FC<Partial<FooterData>> = (props) => {
             <p className="text-gray-800 mb-4 md:mb-0">© 2025 Thiết kế bởi EVOSEA. Tất cả quyền được bảo lưu.</p>
             <div className="flex space-x-4">
               {policies?.map((policy) => (
-                <Link key={policy.name} href={policy.url} className="text-gray-800 hover:text-primary">
-                  {policy.name}
+                <Link key={policy.label} href={policy.path} className="text-gray-800 hover:text-primary">
+                  {policy.label}
                 </Link>
               ))}
             </div>

@@ -8,8 +8,12 @@ import TestimonialsSection from '@/components/home/TestimonialsSection';
 import ContactSection from '@/components/home/ContactSection';
 import { getHomePageData } from '@/lib/services/homepage';
 
+// Revalidate every 60 seconds to get fresh data
+export const revalidate = 60;
+
 const Home: FC = async () => {
   const homePageData = await getHomePageData();
+
   return (
     <>
       <div className="relative z-10">

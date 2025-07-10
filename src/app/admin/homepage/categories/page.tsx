@@ -38,6 +38,9 @@ const CategoriesAdminPage: FC = () => {
         apiClient.getHomeCategoryProducts(),
       ]);
 
+      console.log('categoriesRes', categoriesRes);
+      console.log('featuredIdsRes', featuredIdsRes);
+
       let allCats: CategoryWithChildren[] = [];
       if (categoriesRes.success && categoriesRes.data) {
         allCats = categoriesRes.data;

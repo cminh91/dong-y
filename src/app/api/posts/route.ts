@@ -12,6 +12,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const status = searchParams.get('status');
     const authorId = searchParams.get('authorId');
+    const categoryId = searchParams.get('categoryId');
+    const categorySlug = searchParams.get('categorySlug');
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
 
@@ -28,6 +30,27 @@ export async function GET(request: NextRequest) {
     // Author filter
     if (authorId) {
       where.authorId = authorId;
+    }
+
+    // Category filter by ID
+    if (categoryId) {
+      where.categoryId = categoryId;
+    }
+
+    // Category filter by slug
+    if (categorySlug) {
+      // First find the category by slug, then filter posts by categoryId
+      const category = await prisma.postCategory.findUnique({
+        where: { slug: categorySlug },
+        select: { id: true }
+      });
+
+      if (category) {
+        where.categoryId = category.id;
+      } else {
+        // If category not found, return no posts
+        where.categoryId = 'non-existent-id';
+      }
     }
 
     // Search filter (MySQL compatible)

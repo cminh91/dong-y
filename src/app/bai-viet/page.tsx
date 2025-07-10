@@ -28,6 +28,7 @@ interface PostsPageProps {
   searchParams: Promise<{
     page?: string;
     search?: string;
+    category?: string; // category slug
   }>;
 }
 
@@ -62,27 +63,48 @@ async function fetchPosts(searchParams: any) {
   }
 }
 
+// Fetch categories from API
+async function fetchCategories() {
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
+  const url = new URL('/api/post-categories', fullBaseUrl);
+
+  url.searchParams.set('status', 'ACTIVE');
+  url.searchParams.set('limit', '50');
+
+  try {
+    const response = await fetch(url.toString(), {
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch categories');
+    }
+
+    const data = await response.json();
+    return data.success ? data.data.categories : [];
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return [];
+  }
+}
+
 export default async function PostsPage({ searchParams }: PostsPageProps) {
   const params = await searchParams;
   const page = parseInt(params.page || '1');
   const search = params.search;
+  const categorySlug = params.category;
 
-  // Fetch posts
-  const { posts, pagination } = await fetchPosts({
-    page: page.toString(),
-    search,
-    limit: '4'
-  });
-
-  // Mock categories for now - later can be fetched from API
-  const categories = [
-    'Tất cả',
-    'Sức khỏe',
-    'Thảo dược',
-    'Đông y',
-    'Dinh dưỡng',
-    'Làm đẹp'
-  ];
+  // Fetch posts and categories
+  const [{ posts, pagination }, categories] = await Promise.all([
+    fetchPosts({
+      page: page.toString(),
+      search,
+      categorySlug,
+      limit: '6'
+    }),
+    fetchCategories()
+  ]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -92,13 +114,27 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
           <div className="bg-white rounded-lg shadow p-6 sticky top-4">
             <h2 className="text-xl font-bold mb-4">Danh mục</h2>
             <div className="space-y-2">
-              {categories.map((category, index) => (
+              {/* Tất cả bài viết */}
+              <Link
+                href="/bai-viet"
+                className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${!categorySlug ? 'bg-green-50 text-green-700' : ''}`}
+              >
+                Tất cả bài viết
+              </Link>
+
+              {/* Danh mục từ API */}
+              {categories.map((category: any) => (
                 <Link
-                  key={index}
-                  href={`/bai-viet?category=${encodeURIComponent(category)}`}
-                  className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${index === 0 ? 'bg-green-50 text-green-700' : ''}`}
+                  key={category.id}
+                  href={`/bai-viet?category=${category.slug}`}
+                  className={`block py-2 px-4 rounded-lg hover:bg-green-50 ${categorySlug === category.slug ? 'bg-green-50 text-green-700' : ''}`}
                 >
-                  {category}
+                  {category.name}
+                  {(category as any).postsCount !== undefined && (
+                    <span className="text-sm text-gray-500 ml-2">
+                      ({(category as any).postsCount})
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

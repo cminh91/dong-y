@@ -5,8 +5,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'
-import layoutData from '@/data/layout.json'
 import { logoutAction } from '@/lib/auth-actions'
+import { CategoryWithChildren, PostCategory, SystemSetting } from '@/types/api'
 
 interface UserData {
   role?: 'ADMIN' | 'COLLABORATOR' | 'AGENT' | 'USER'
@@ -16,24 +16,36 @@ interface UserData {
 }
 
 interface HeaderProps {
-  productCategories?: any[]
-  blogCategories?: any[]
+  productCategories?: CategoryWithChildren[]
+  blogCategories?: PostCategory[]
   aboutCategories?: any[]
+  contactInfo?: SystemSetting | null
   cartItemCount?: number
   onSearch?: (searchTerm: string) => void
+  loading?: boolean
+  error?: string | null
 }
 
-const Header: FC<HeaderProps> = (props) => {
+const Header: FC<HeaderProps> = ({
+  productCategories = [],
+  blogCategories = [],
+  aboutCategories = [],
+  contactInfo,
+  cartItemCount = 0,
+  onSearch,
+  loading = false,
+  error = null
+}) => {
   const router = useRouter();
 
-  const defaultProps = {
-    ...layoutData.header,
-    ...props
-  };
+  // Parse contact info - API trả về object trực tiếp
+  const contact = contactInfo || {};
+  console.log('Header contactInfo:', contactInfo);
+  console.log('Header contact:', contact);
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   useEffect(() => {
@@ -80,7 +92,7 @@ const Header: FC<HeaderProps> = (props) => {
       console.error('Error fetching user data:', error);
       setUser(null);
     } finally {
-      setLoading(false);
+      setIsUserLoading(false);
     }
   };
 
@@ -89,12 +101,7 @@ const Header: FC<HeaderProps> = (props) => {
     await logoutAction()
   }
 
-  const {
-    cartItemCount = 0,
-    productCategories = [],
-    blogCategories = [],
-    aboutCategories = [],
-  } = defaultProps
+  // Props are already destructured in function parameters
   const isLoggedIn = !!user
   const userName = user?.fullName || '';
   const balance = user?.availableBalance || 0;
@@ -123,12 +130,16 @@ const Header: FC<HeaderProps> = (props) => {
       <div className="bg-green-50 py-2 hidden lg:block">
         <div className="container mx-auto px-4 flex justify-between items-center text-sm">
           <div className="flex items-center space-x-4">
-            <span><i className="fas fa-phone-alt text-green-600 mr-2"></i>Hotline: 1900 1234</span>
-            <span><i className="fas fa-envelope text-green-600 mr-2"></i>Email: contact@hepasaky.com</span>
+            {(contact as any)?.phone && (
+              <span><i className="fas fa-phone-alt text-green-600 mr-2"></i>Hotline: {(contact as any).phone}</span>
+            )}
+            {(contact as any)?.email && (
+              <span><i className="fas fa-envelope text-green-600 mr-2"></i>Email: {(contact as any).email}</span>
+            )}
           </div>
           <div className="flex items-center space-x-4">
             {mounted ? (
-              loading ? (
+              isUserLoading ? (
                 <div className="h-5 w-32 bg-gray-200 rounded animate-pulse"></div>
               ) : isLoggedIn ? (
                 <>
@@ -239,7 +250,7 @@ const Header: FC<HeaderProps> = (props) => {
                 <SheetContent side="left" className="p-0 w-[280px]">
                   <div className="h-full flex flex-col">
                     {/* Hiển thị thông tin người dùng và số dư nếu đã đăng nhập */}
-                    {mounted && !loading && isLoggedIn && (
+                    {mounted && !isUserLoading && isLoggedIn && (
                       <div className="px-4 py-3 bg-green-50 border-b">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
@@ -275,12 +286,50 @@ const Header: FC<HeaderProps> = (props) => {
                     <nav className="flex-1 overflow-y-auto">
                       <ul className="py-2">
                         <li><Link href="/" className="block px-4 py-2 hover:bg-gray-50">Trang chủ</Link></li>
-                        <li><Link href="/san-pham" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link></li>
+
+                        {/* Product Categories */}
+                        <li className="relative">
+                          <Link href="/san-pham" className="block px-4 py-2 hover:bg-gray-50">Sản phẩm</Link>
+                          {productCategories.length > 0 && (
+                            <ul className="ml-4">
+                              {productCategories.slice(0, 5).map((category) => (
+                                <li key={category.id}>
+                                  <Link
+                                    href={`/san-pham?category=${category.slug}`}
+                                    className="block px-4 py-1 text-sm text-gray-600 hover:bg-gray-50"
+                                  >
+                                    {category.name}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+
                         <li><Link href="/gioi-thieu" className="block px-4 py-2 hover:bg-gray-50">Giới thiệu</Link></li>
-                        <li><Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link></li>
+
+                        {/* Blog Categories */}
+                        <li className="relative">
+                          <Link href="/bai-viet" className="block px-4 py-2 hover:bg-gray-50">Bài viết</Link>
+                          {blogCategories.length > 0 && (
+                            <ul className="ml-4">
+                              {blogCategories.slice(0, 5).map((category) => (
+                                <li key={category.id}>
+                                  <Link
+                                    href={`/bai-viet?category=${category.slug}`}
+                                    className="block px-4 py-1 text-sm text-gray-600 hover:bg-gray-50"
+                                  >
+                                    {category.name}
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </li>
+
                         <li><Link href="/lien-he" className="block px-4 py-2 hover:bg-gray-50">Liên hệ</Link></li>
 
-                        {mounted && !loading && isLoggedIn ? (
+                        {mounted && !isUserLoading && isLoggedIn ? (
                           <>
                             {user?.role === 'ADMIN' ? (
                               <li><Link href="/admin" className="block px-4 py-2 hover:bg-gray-50">
@@ -372,7 +421,7 @@ const Header: FC<HeaderProps> = (props) => {
           {/* Cart & Balance */}
           <div className="flex items-center space-x-4">
             {/* Hiển thị icon người dùng trên mobile */}
-            {mounted && !loading && isLoggedIn && (
+            {mounted && !isUserLoading && isLoggedIn && (
               <div className="lg:hidden">
                 <Link href="/tai-khoan" className="block p-2 relative">
                   <i className="fas fa-user text-xl text-green-600"></i>
@@ -406,18 +455,18 @@ const Header: FC<HeaderProps> = (props) => {
             <Link href="/san-pham" className="py-2 hover:text-green-500">Sản phẩm</Link>
             {productCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                {productCategories.map((cat: any) => (
-                  <li key={cat.id} className="relative group/sub">
-                    <Link href={cat.path} className="block px-4 py-2 hover:bg-gray-50">
-                      {cat.label}
-                      {cat.children && <i className="fas fa-chevron-right float-right mt-1" />}
+                {productCategories.map((category) => (
+                  <li key={category.id} className="relative group/sub">
+                    <Link href={`/san-pham?category/${category.slug}`} className="block px-4 py-2 hover:bg-gray-50">
+                      {category.name}
+                      {category.children && category.children.length > 0 && <i className="fas fa-chevron-right float-right mt-1" />}
                     </Link>
-                    {cat.children && (
+                    {category.children && category.children.length > 0 && (
                       <ul className="absolute top-0 left-full z-50 hidden group-hover/sub:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                        {cat.children.map((sub: any) => (
-                          <li key={sub.id}>
-                            <Link href={sub.path} className="block px-4 py-2 hover:bg-gray-50">
-                              {sub.label}
+                        {category.children.map((subCategory) => (
+                          <li key={subCategory.id}>
+                            <Link href={`/san-pham?category/${subCategory.slug}`} className="block px-4 py-2 hover:bg-gray-50">
+                              {subCategory.name}
                             </Link>
                           </li>
                         ))}
@@ -448,29 +497,11 @@ const Header: FC<HeaderProps> = (props) => {
             <Link href="/bai-viet" className="py-2 hover:text-green-500">Bài viết</Link>
             {blogCategories.length > 0 && (
               <ul className="absolute top-full left-0 z-50 hidden group-hover:block bg-white shadow-lg rounded-lg py-2 min-w-[200px]">
-                {blogCategories.map((cat: any) => (
-                  <li key={cat.id}>
-                    <div className="grid grid-cols-2 gap-4">
-                      {blogCategories?.map((subCat: any) => (
-                        <div key={subCat.id}>
-                          <h3 className="font-bold text-lg mb-2">
-                            <Link href={`/bai-viet/${subCat.slug}`}>{subCat.name}</Link>
-                          </h3>
-                          <ul className="space-y-2">
-                            {subCat.children?.map((sub: any) => (
-                              <li key={sub.id}>
-                                <Link
-                                  href={`/bai-viet/${sub.slug}`}
-                                  className="block px-4 py-2 hover:bg-gray-50"
-                                >
-                                  {sub.label}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
+                {blogCategories.map((category) => (
+                  <li key={category.id}>
+                    <Link href={`/bai-viet?category=${category.slug}`} className="block px-4 py-2 hover:bg-gray-50">
+                      {category.name}
+                    </Link>
                   </li>
                 ))}
               </ul>

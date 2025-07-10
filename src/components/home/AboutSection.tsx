@@ -7,11 +7,15 @@ interface AboutSectionProps {
 }
 
 const AboutSection: FC<AboutSectionProps> = ({ data }) => {
+  //console.log('AboutSection data:', data);
+
   if (!data || !data.value) {
+    //console.log('AboutSection: No data or value');
     return null; // or a loading/placeholder component
   }
 
   const { title, subtitle, content, image1, image2, stats } = data.value as any;
+  //console.log('AboutSection parsed data:', { title, subtitle, content, image1, image2, stats });
 
   return (
     <section id="about" className="py-16">
@@ -32,22 +36,41 @@ const AboutSection: FC<AboutSectionProps> = ({ data }) => {
           </div>
           <div className="md:w-1/2">
             <div className="grid grid-cols-2 gap-4">
-              <Image
-                src={image1}
-                alt="Ảnh 1"
-                className="rounded-lg shadow-lg"
-                width={300}
-                height={200}
-                style={{objectFit: 'cover'}}
-              />
-              <Image
-                src={image2}
-                alt="Ảnh 2"
-                className="rounded-lg shadow-lg mt-8"
-                width={300}
-                height={200}
-                style={{objectFit: 'cover'}}
-              />
+              {image1 && image1.trim() !== '' ? (
+                <Image
+                  src={image1}
+                  alt="Ảnh 1"
+                  className="rounded-lg shadow-lg"
+                  width={300}
+                  height={200}
+                  style={{objectFit: 'cover'}}
+                />
+              ) : (
+                <div
+                  className="rounded-lg shadow-lg bg-gray-200 flex items-center justify-center"
+                  style={{ width: '300px', height: '200px' }}
+                >
+                  <span className="text-gray-500">Chưa có ảnh</span>
+                </div>
+              )}
+
+              {image2 && image2.trim() !== '' ? (
+                <Image
+                  src={image2}
+                  alt="Ảnh 2"
+                  className="rounded-lg shadow-lg mt-8"
+                  width={300}
+                  height={200}
+                  style={{objectFit: 'cover'}}
+                />
+              ) : (
+                <div
+                  className="rounded-lg shadow-lg bg-gray-200 flex items-center justify-center mt-8"
+                  style={{ width: '300px', height: '200px' }}
+                >
+                  <span className="text-gray-500">Chưa có ảnh</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

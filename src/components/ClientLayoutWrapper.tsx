@@ -2,9 +2,11 @@
 import { usePathname } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { useLayoutData } from "@/hooks/useLayoutData";
 
 export default function ClientLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { layoutData, loading, error } = useLayoutData();
 
   // Các trang không cần header/footer
   const noLayoutPages = [
@@ -24,9 +26,21 @@ export default function ClientLayoutWrapper({ children }: { children: React.Reac
 
   return (
     <>
-      <Header />
+      <Header
+        productCategories={layoutData.productCategories}
+        blogCategories={layoutData.postCategories}
+        contactInfo={layoutData.contactInfo}
+        loading={loading}
+        error={error}
+      />
       {children}
-      <Footer />
+      <Footer
+        productCategories={layoutData.productCategories}
+
+        contactInfo={layoutData.contactInfo}
+        loading={loading}
+        error={error}
+      />
     </>
   );
 }

@@ -12,8 +12,22 @@ const HeroSection: FC<HeroSectionProps> = ({ data }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
+  //console.log('HeroSection received data:', data);
+
   if (!data || !data.value || !Array.isArray(data.value) || data.value.length === 0) {
-    return null; // or a loading/placeholder component
+    //console.log('HeroSection: No valid data, returning null');
+    return (
+      <section className="relative py-16 md:py-24 bg-gray-100">
+        <div className="container mx-auto px-4 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight text-gray-500">
+            Chưa có dữ liệu Hero Section
+          </h1>
+          <p className="text-gray-400">
+            Vui lòng thêm dữ liệu trong trang quản trị
+          </p>
+        </div>
+      </section>
+    );
   }
 
   const heroData = data.value as any[];

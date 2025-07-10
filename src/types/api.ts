@@ -79,6 +79,17 @@ export interface CategoryWithChildren extends Category {
   products?: Product[];
 }
 
+// Post Category Types (for blog posts)
+export interface PostCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  status: 'ACTIVE' | 'INACTIVE';
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Post Types
 export interface Post {
   id: string;

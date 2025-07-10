@@ -260,10 +260,9 @@ export function RegisterForm() {
         };
         reader.readAsDataURL(file);
 
-        // Upload image using Cloudinary API
+        // Upload image using /api/upload
         const uploadFormData = new FormData();
         uploadFormData.append('files', file);
-        uploadFormData.append('folder', 'id-cards'); // Organize in id-cards folder
 
         const response = await fetch('/api/upload', {
           method: 'POST',
@@ -273,16 +272,16 @@ export function RegisterForm() {
         const result = await response.json();
 
         if (result.success && result.data.files.length > 0) {
-          // Store the uploaded image URL from Cloudinary
+          // Store the uploaded image URL
           const uploadedFile = result.data.files[0];
           if (side === "front") {
-            setFrontImageUrl(uploadedFile.secure_url);
+            setFrontImageUrl(uploadedFile.url);
           } else {
-            setBackImageUrl(uploadedFile.secure_url);
+            setBackImageUrl(uploadedFile.url);
           }
-          toast.success("Ảnh đã được tải lên Cloudinary thành công");
+          toast.success("Ảnh đã được tải lên thành công");
         } else {
-          toast.error(result.error || "Lỗi khi tải ảnh lên Cloudinary");
+          toast.error(result.error || "Lỗi khi tải ảnh lên");
         }
       } catch (error) {
         console.error("Upload error:", error);
@@ -420,7 +419,6 @@ export function RegisterForm() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="CUSTOMER">Khách hàng</SelectItem>
-                  <SelectItem value="STAFF">Nhân viên</SelectItem>
                   <SelectItem value="COLLABORATOR">Cộng tác viên</SelectItem>
                   <SelectItem value="AGENT">Đại lý</SelectItem>
                 </SelectContent>
