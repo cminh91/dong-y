@@ -194,22 +194,24 @@ export function RegisterForm() {
       if (newErrors.address) isValid = false;
 
     } else if (currentStep === 2) {
-      // Validate CCCD/CMND (bắt buộc cho tất cả vai trò)
-      newErrors.idCardNumber = validateIdCardNumber(formData.idCardNumber);
-      if (!frontImageUrl) {
-        newErrors.frontIdImage = "Vui lòng tải lên ảnh CCCD mặt trước";
-        isValid = false;
-      }
+      // Validate CCCD/CMND (bắt buộc cho COLLABORATOR và AGENT)
+      if (role !== "CUSTOMER") {
+        newErrors.idCardNumber = validateIdCardNumber(formData.idCardNumber);
+        if (!frontImageUrl) {
+          newErrors.frontIdImage = "Vui lòng tải lên ảnh CCCD mặt trước";
+          isValid = false;
+        }
 
-      if (!backImageUrl) {
-        newErrors.backIdImage = "Vui lòng tải lên ảnh CCCD mặt sau";
-        isValid = false;
-      }
+        if (!backImageUrl) {
+          newErrors.backIdImage = "Vui lòng tải lên ảnh CCCD mặt sau";
+          isValid = false;
+        }
 
-      if (newErrors.idCardNumber) isValid = false;
+        if (newErrors.idCardNumber) isValid = false;
+      }
 
     } else if (currentStep === 3) {
-      // Validate thông tin ngân hàng (bắt buộc cho tất cả vai trò)
+      // Validate thông tin ngân hàng cho COLLABORATOR và AGENT ở bước 3
       newErrors.bankName = validateBankName(formData.bankName);
       newErrors.accountNumber = validateAccountNumber(formData.accountNumber);
       newErrors.branch = validateBranch(formData.branch);
@@ -303,8 +305,55 @@ export function RegisterForm() {
   const handleStepSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Nếu chưa phải bước cuối, validate và chuyển bước tiếp theo
-    if (step < 3) {
+    // Nếu là CUSTOMER, chỉ cần step 1
+    if (role === "CUSTOMER") {
+      // Validate step 1 và submit luôn
+      if (validateStep(1)) {
+        setLoading(true);
+        setErrors({});
+        try {
+          // Tạo FormData từ state để gửi tất cả thông tin
+          const submitFormData = new FormData();
+          submitFormData.append("role", role);
+          submitFormData.append("fullName", formData.fullName);
+          submitFormData.append("phoneNumber", formData.phoneNumber);
+          submitFormData.append("address", formData.address);
+          submitFormData.append("email", formData.email);
+          submitFormData.append("password", formData.password);
+          submitFormData.append("confirmPassword", formData.confirmPassword);
+
+          // Add referral code if exists
+          if (referralCode) {
+            submitFormData.append("referralCode", referralCode);
+          }
+
+          const result = await registerAction(submitFormData);
+          console.log("Registration result:", result);
+
+          if (result.success) {
+            toast.success("Đăng ký thành công!");
+            router.push("/dang-ky-thanh-cong");
+          } else {
+            // Hiển thị lỗi validation trên form
+            if (result.field) {
+              setErrors({ [result.field]: result.error });
+            } else {
+              toast.error(result.error || "Đã có lỗi xảy ra.");
+            }
+          }
+        } catch (error) {
+          console.error("Registration error:", error);
+          toast.error("Đã xảy ra lỗi khi đăng ký. Vui lòng thử lại sau.");
+        } finally {
+          setLoading(false);
+        }
+      }
+      return;
+    }
+
+    // Xử lý cho COLLABORATOR và AGENT (vẫn giữ nguyên logic đa bước)
+    const maxStep = role === "CUSTOMER" ? 1 : 3;
+    if (step < maxStep) {
       // Validate step hiện tại, nếu ok thì next step
       if (validateStep(step)) {
         setStep(step + 1);
@@ -318,7 +367,7 @@ export function RegisterForm() {
     try {
       // Validate tất cả các bước trước khi submit
       let valid = true;
-      for (let s = 1; s <= 3; s++) {
+      for (let s = 1; s <= maxStep; s++) {
         if (!validateStep(s)) {
           valid = false;
           setStep(s);
@@ -405,8 +454,12 @@ export function RegisterForm() {
         {/* Stepper */}
         <div className="flex items-center justify-center gap-2 mb-4">
           <div className={`h-2 w-2 rounded-full ${step===1?"bg-green-700":"bg-gray-300"}`}></div>
-          <div className={`h-2 w-2 rounded-full ${step===2?"bg-green-700":"bg-gray-300"}`}></div>
-          <div className={`h-2 w-2 rounded-full ${step===3?"bg-green-700":"bg-gray-300"}`}></div>
+          {role !== "CUSTOMER" && (
+            <>
+              <div className={`h-2 w-2 rounded-full ${step===2?"bg-green-700":"bg-gray-300"}`}></div>
+              <div className={`h-2 w-2 rounded-full ${step===3?"bg-green-700":"bg-gray-300"}`}></div>
+            </>
+          )}
         </div>
         {/* Step 1: Thông tin cá nhân */}
         {step === 1 && (
@@ -546,137 +599,136 @@ export function RegisterForm() {
               </div>
             </div>
           </div>
-        )}        {/* Step 2: CCCD/CMND */}
-        {step === 2 && (
+        )}        {/* Step 2: CCCD/CMND (chỉ hiển thị với COLLABORATOR và AGENT) */}
+        {step === 2 && role !== "CUSTOMER" && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">CCCD/CMND</h3>
-
-            <div className="space-y-2">
-              <Label htmlFor="idCardNumber">Số CCCD/CMND *</Label>
-              <Input
-                id="idCardNumber"
-                name="idCardNumber"
-                placeholder="079123456789"
-                required
-                value={formData.idCardNumber}
-                onChange={(e) => handleFormChange('idCardNumber', e.target.value)}
-                className={errors.idCardNumber ? "border-red-500" : ""}
-              />
-              {errors.idCardNumber && (
-                <p className="text-sm text-red-500">{errors.idCardNumber}</p>
-              )}
-            </div>            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4">
-                <Label>CCCD/CMND mặt trước *</Label>
-                <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                  {frontImagePreview ? (
-                    <div className="relative h-full w-full">
-                      <img
-                        src={frontImagePreview}
-                        alt="CCCD mặt trước"
-                        className="h-full w-full rounded object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute right-2 top-2"
-                        onClick={() => {
-                          setFrontImagePreview(null)
-                          setFrontImageUrl(null)
-                        }}
-                      >
-                        Xóa
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                      <Upload className="h-10 w-10 text-gray-400" />
-                      <p className="text-sm text-gray-500">
-                        Kéo thả hoặc nhấp để tải lên
-                      </p>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    id="frontImage"
-                    name="frontImage"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange("front", e)}
+                <div className="space-y-2">
+                  <Label htmlFor="idCardNumber">Số CCCD/CMND *</Label>
+                  <Input
+                    id="idCardNumber"
+                    name="idCardNumber"
+                    placeholder="079123456789"
+                    required
+                    value={formData.idCardNumber}
+                    onChange={(e) => handleFormChange('idCardNumber', e.target.value)}
+                    className={errors.idCardNumber ? "border-red-500" : ""}
                   />
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => document.getElementById("frontImage")?.click()}
-                  disabled={uploadingImage === "front"}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {uploadingImage === "front" ? "Đang tải lên..." : "Chọn ảnh"}
-                </Button>
-                {errors.frontIdImage && (
-                  <p className="text-sm text-red-500">{errors.frontIdImage}</p>
-                )}
-              </div>              <div className="space-y-4">
-                <Label>CCCD/CMND mặt sau *</Label>
-                <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
-                  {backImagePreview ? (
-                    <div className="relative h-full w-full">
-                      <img
-                        src={backImagePreview}
-                        alt="CCCD mặt sau"
-                        className="h-full w-full rounded object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        className="absolute right-2 top-2"
-                        onClick={() => {
-                          setBackImagePreview(null)
-                          setBackImageUrl(null)
-                        }}
-                      >
-                        Xóa
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center space-y-2 text-center">
-                      <Upload className="h-10 w-10 text-gray-400" />
-                      <p className="text-sm text-gray-500">
-                        Kéo thả hoặc nhấp để tải lên
-                      </p>
-                    </div>
+                  {errors.idCardNumber && (
+                    <p className="text-sm text-red-500">{errors.idCardNumber}</p>
                   )}
-                  <input
-                    type="file"
-                    id="backImage"
-                    name="backImage"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => handleFileChange("back", e)}
-                  />
+                </div>            <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <Label>CCCD/CMND mặt trước *</Label>
+                    <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                      {frontImagePreview ? (
+                        <div className="relative h-full w-full">
+                          <img
+                            src={frontImagePreview}
+                            alt="CCCD mặt trước"
+                            className="h-full w-full rounded object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute right-2 top-2"
+                            onClick={() => {
+                              setFrontImagePreview(null)
+                              setFrontImageUrl(null)
+                            }}
+                          >
+                            Xóa
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                          <Upload className="h-10 w-10 text-gray-400" />
+                          <p className="text-sm text-gray-500">
+                            Kéo thả hoặc nhấp để tải lên
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        id="frontImage"
+                        name="frontImage"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange("front", e)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => document.getElementById("frontImage")?.click()}
+                      disabled={uploadingImage === "front"}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {uploadingImage === "front" ? "Đang tải lên..." : "Chọn ảnh"}
+                    </Button>
+                    {errors.frontIdImage && (
+                      <p className="text-sm text-red-500">{errors.frontIdImage}</p>
+                    )}
+                  </div>              <div className="space-y-4">
+                    <Label>CCCD/CMND mặt sau *</Label>
+                    <div className="flex h-48 flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 p-4">
+                      {backImagePreview ? (
+                        <div className="relative h-full w-full">
+                          <img
+                            src={backImagePreview}
+                            alt="CCCD mặt sau"
+                            className="h-full w-full rounded object-cover"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            className="absolute right-2 top-2"
+                            onClick={() => {
+                              setBackImagePreview(null)
+                              setBackImageUrl(null)
+                            }}
+                          >
+                            Xóa
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center space-y-2 text-center">
+                          <Upload className="h-10 w-10 text-gray-400" />
+                          <p className="text-sm text-gray-500">
+                            Kéo thả hoặc nhấp để tải lên
+                          </p>
+                        </div>
+                      )}
+                      <input
+                        type="file"
+                        id="backImage"
+                        name="backImage"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange("back", e)}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => document.getElementById("backImage")?.click()}
+                      disabled={uploadingImage === "back"}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      {uploadingImage === "back" ? "Đang tải lên..." : "Chọn ảnh"}
+                    </Button>
+                    {errors.backIdImage && (
+                      <p className="text-sm text-red-500">{errors.backIdImage}</p>
+                    )}
+                  </div>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => document.getElementById("backImage")?.click()}
-                  disabled={uploadingImage === "back"}
-                >
-                  <Upload className="mr-2 h-4 w-4" />
-                  {uploadingImage === "back" ? "Đang tải lên..." : "Chọn ảnh"}
-                </Button>
-                {errors.backIdImage && (
-                  <p className="text-sm text-red-500">{errors.backIdImage}</p>
-                )}
-              </div>
-            </div>
           </div>
-        )}        {/* Step 3: Ngân hàng */}
-        {step === 3 && (
+        )}        {/* Step 3: Ngân hàng (chỉ hiển thị với COLLABORATOR và AGENT) */}
+        {step === 3 && role !== "CUSTOMER" && (
           <div className="space-y-4">
             <h3 className="text-lg font-medium">Thông tin ngân hàng</h3>
 
@@ -759,15 +811,23 @@ export function RegisterForm() {
               Quay lại
             </Button>
           )}
-          {step < 3 && (
-            <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
-              Tiếp tục
-            </Button>
-          )}
-          {step === 3 && (
+          {role === "CUSTOMER" ? (
             <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
               {loading ? "Đang xử lý..." : "Đăng ký"}
             </Button>
+          ) : (
+            <>
+              {step < 3 && (
+                <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
+                  Tiếp tục
+                </Button>
+              )}
+              {step === 3 && (
+                <Button type="submit" className="bg-green-700 hover:bg-green-800" disabled={loading}>
+                  {loading ? "Đang xử lý..." : "Đăng ký"}
+                </Button>
+              )}
+            </>
           )}
         </div>
       </form>

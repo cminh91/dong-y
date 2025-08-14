@@ -17,7 +17,11 @@ export function useLayoutData() {
       try {
         setLoading(true);
         setError(null);
+        // console.log('useLayoutData: Fetching layout data...');
         const data = await LayoutService.getLayoutData();
+        // console.log('useLayoutData: Layout data received:', data);
+        // console.log('useLayoutData: Post categories count:', data.postCategories?.length || 0);
+        // console.log('useLayoutData: Product categories count:', data.productCategories?.length || 0);
         setLayoutData(data);
       } catch (err) {
         console.error('Error fetching layout data:', err);

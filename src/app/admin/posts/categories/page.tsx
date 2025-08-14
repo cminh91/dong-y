@@ -5,17 +5,15 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { PostCategory } from '@/types/api';
 import PostCategoryForm from '@/components/admin/PostCategoryForm';
-import PostCategoryDeleteAction from '@/components/admin/PostCategoryDeleteAction';
 
 export default function PostCategoriesPage() {
   const [categories, setCategories] = useState<PostCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<PostCategory | null>(null);
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchCategories();
@@ -34,11 +32,7 @@ export default function PostCategoriesPage() {
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
-      toast({
-        title: 'Lỗi',
-        description: 'Không thể tải danh sách danh mục',
-        variant: 'destructive',
-      });
+      toast.error('Không thể tải danh sách danh mục');
     } finally {
       setLoading(false);
     }
@@ -58,18 +52,36 @@ export default function PostCategoriesPage() {
     setShowForm(false);
     setEditingCategory(null);
     fetchCategories();
-    toast({
-      title: 'Thành công',
-      description: editingCategory ? 'Đã cập nhật danh mục' : 'Đã tạo danh mục mới',
-    });
+    toast.success(editingCategory ? 'Đã cập nhật danh mục' : 'Đã tạo danh mục mới');
   };
 
-  const handleDeleteSuccess = () => {
-    fetchCategories();
-    toast({
-      title: 'Thành công',
-      description: 'Đã xóa danh mục',
-    });
+  const handleDelete = async (categoryId: string, categoryName: string, postsCount: number) => {
+    if (postsCount > 0) {
+      toast.error(`Không thể xóa danh mục "${categoryName}" vì có ${postsCount} bài viết đang sử dụng.`);
+      return;
+    }
+
+    if (!confirm(`Bạn có chắc muốn xóa danh mục "${categoryName}"?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/post-categories/${categoryId}`, {
+        method: 'DELETE',
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        toast.success('Xóa danh mục thành công!');
+        fetchCategories();
+      } else {
+        toast.error(data.error || 'Có lỗi xảy ra khi xóa danh mục');
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      toast.error('Có lỗi xảy ra khi xóa danh mục');
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -123,9 +135,13 @@ export default function PostCategoriesPage() {
           </CardHeader>
           <CardContent>
             <PostCategoryForm
-              category={editingCategory}
-              onSuccess={handleFormSuccess}
-              onCancel={() => setShowForm(false)}
+              initialData={editingCategory ? {
+                ...editingCategory,
+                description: editingCategory.description || '',
+                image: (editingCategory as any).image || '',
+                sortOrder: (editingCategory as any).sortOrder || 0
+              } : undefined}
+              isEdit={!!editingCategory}
             />
           </CardContent>
         </Card>
@@ -189,7 +205,7 @@ export default function PostCategoriesPage() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className="text-sm">{category.sortOrder || 0}</span>
+                        <span className="text-sm">{(category as any).sortOrder || 0}</span>
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-sm text-gray-500">
@@ -206,10 +222,14 @@ export default function PostCategoriesPage() {
                             <i className="fas fa-edit mr-1"></i>
                             Sửa
                           </Button>
-                          <PostCategoryDeleteAction
-                            category={category}
-                            onSuccess={handleDeleteSuccess}
-                          />
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDelete(category.id, category.name, (category as any).postsCount || 0)}
+                          >
+                            <i className="fas fa-trash mr-1"></i>
+                            Xóa
+                          </Button>
                         </div>
                       </td>
                     </tr>

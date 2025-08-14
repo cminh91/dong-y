@@ -40,8 +40,8 @@ const Header: FC<HeaderProps> = ({
 
   // Parse contact info - API trả về object trực tiếp
   const contact = contactInfo || {};
-  console.log('Header contactInfo:', contactInfo);
-  console.log('Header contact:', contact);
+  console.log('Header blogCategories:', blogCategories);
+  console.log('Header blogCategories length:', blogCategories.length);
 
   const [mounted, setMounted] = useState(false);
   const [user, setUser] = useState<UserData | null>(null);

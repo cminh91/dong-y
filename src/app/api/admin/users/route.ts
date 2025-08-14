@@ -192,6 +192,7 @@ export async function POST(req: NextRequest) {
         address: validatedData.address ?? "",
         password: hashedPassword,
         role: validatedData.role,
+        status: 'ACTIVE', // Tài khoản nhân viên luôn được kích hoạt ngay khi tạo
       },
     });
 

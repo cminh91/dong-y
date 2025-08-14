@@ -206,7 +206,7 @@ export async function registerAction(formData: FormData) {
         phoneNumber: (validatedData as RegisterValidatedData).phoneNumber,
         address: (validatedData as RegisterValidatedData).address,
         role: (validatedData as RegisterValidatedData).role as any,
-        status: 'PENDING', // Tất cả tài khoản mới đều chờ admin kích hoạt
+        status: (validatedData as RegisterValidatedData).role === 'CUSTOMER' ? 'ACTIVE' : 'PENDING', // Khách hàng tự động kích hoạt, các vai trò khác chờ admin kích hoạt
         referredBy: referrerId // Set the referrer
       }
       })

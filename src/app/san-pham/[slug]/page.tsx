@@ -19,25 +19,16 @@ async function fetchProduct(slug: string) {
   const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
   const url = `${fullBaseUrl}/api/products/by-slug/${slug}`;
 
-  console.log('Fetching product with slug:', slug);
-  console.log('API URL:', url);
-
   try {
     const response = await fetch(url, {
       cache: 'no-store' // Always fetch fresh data for SSR
     });
 
-    console.log('Response status:', response.status);
-
     if (!response.ok) {
-      console.log('Response not OK');
       return null;
     }
 
     const data = await response.json();
-    console.log('API response success:', data.success);
-    console.log('Product found:', !!data.data?.product);
-
     return data.success ? data.data : null;
   } catch (error) {
     console.error('Error fetching product:', error);
@@ -82,19 +73,28 @@ const ProductDetailPage: FC<ProductDetailPageProps> = async ({ params, searchPar
   // Fetch product data from API
   const data = await fetchProduct(slug);
 
-  console.log('ProductDetailPage - data received:', !!data);
-  console.log('ProductDetailPage - product exists:', !!data?.product);
-
   if (!data || !data.product) {
-    console.log('ProductDetailPage - calling notFound()');
     notFound();
   }
 
   const { product, relatedProducts } = data;
 
+  // Parse images if it's a JSON string
+  let productImages: string[] = [];
+  try {
+    if (typeof product.images === 'string') {
+      productImages = JSON.parse(product.images);
+    } else if (Array.isArray(product.images)) {
+      productImages = product.images;
+    }
+  } catch (error) {
+    console.error('Error parsing product images:', error);
+    productImages = [];
+  }
+
   const displayPrice = product.salePrice || product.price;
   const hasDiscount = product.salePrice && product.salePrice < product.price;
-  const discountPercent = hasDiscount 
+  const discountPercent = hasDiscount
     ? Math.round(((product.price - product.salePrice!) / product.price) * 100)
     : 0;
 
@@ -123,7 +123,7 @@ const ProductDetailPage: FC<ProductDetailPageProps> = async ({ params, searchPar
         <div className="space-y-4">
           <div className="relative aspect-square overflow-hidden rounded-lg">
             <Image
-              src={product.images?.[0] || '/images/placeholder.png'}
+              src={productImages[0] || '/images/placeholder.png'}
               alt={product.name}
               fill
               className="object-cover"
@@ -135,9 +135,9 @@ const ProductDetailPage: FC<ProductDetailPageProps> = async ({ params, searchPar
             )}
           </div>
           {/* Thumbnail images */}
-          {product.images && product.images.length > 1 && (
+          {productImages && productImages.length > 1 && (
             <div className="flex space-x-2 overflow-x-auto">
-              {product.images.slice(1, 5).map((image: string, index: number) => (
+              {productImages.slice(1, 5).map((image: string, index: number) => (
                 <div key={index} className="flex-shrink-0 w-20 h-20 relative rounded-lg overflow-hidden border">
                   <Image 
                     src={image} 

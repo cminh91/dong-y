@@ -14,7 +14,7 @@ const contactSectionSchema = z.object({
   address: z.string().min(1, 'Địa chỉ là bắt buộc'),
   phone: z.string().min(1, 'Số điện thoại là bắt buộc'),
   email: z.string().email('Email không hợp lệ'),
-  mapUrl: z.string().url('URL bản đồ không hợp lệ').optional().or(z.literal('')),
+  mapUrl: z.string().optional(),
   workingHours: z.string().optional(),
   facebookUrl: z.string().url().optional().or(z.literal('')),
   twitterUrl: z.string().url().optional().or(z.literal('')),
@@ -28,6 +28,7 @@ type ContactSectionFormValues = z.infer<typeof contactSectionSchema>;
 export default function ContactSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
+  const [mapPreview, setMapPreview] = useState('');
 
   const form = useForm<ContactSectionFormValues>({
     defaultValues: {
@@ -154,14 +155,56 @@ export default function ContactSettingsPage() {
               name="mapUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>URL Bản đồ</FormLabel>
+                  <FormLabel className="flex items-center gap-2">
+                    URL Bản đồ
+                    <span className="text-xs text-gray-500 font-normal">(Mã nhúng iframe)</span>
+                  </FormLabel>
                   <FormControl>
-                    <Textarea {...field} placeholder="Dán mã nhúng iframe từ Google Maps vào đây" />
+                    <Textarea
+                      {...field}
+                      placeholder="Dán mã nhúng iframe từ Google Maps vào đây"
+                      className="min-h-[120px]"
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setMapPreview(e.target.value);
+                      }}
+                    />
                   </FormControl>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <p>Hướng dẫn:</p>
+                    <ol className="list-decimal list-inside mt-1 space-y-1">
+                      <li>Mở Google Maps và tìm địa chỉ của bạn</li>
+                      <li>Nhấn vào nút "Chia sẻ" → "Nhúng bản đồ"</li>
+                      <li>Sao chép mã HTML và dán vào đây</li>
+                    </ol>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
+            
+            {/* Map Preview */}
+            {mapPreview && (
+              <Card className="mt-4 border-blue-200 bg-blue-50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <i className="fas fa-map-marked-alt text-blue-600"></i>
+                    Xem trước bản đồ
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="border rounded-lg overflow-hidden bg-white shadow-sm">
+                    <div
+                      className="w-full h-64"
+                      dangerouslySetInnerHTML={{ __html: mapPreview }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Đây là cách bản đồ sẽ hiển thị trên trang liên hệ công cộng.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
             <FormField
               control={form.control}
               name="facebookUrl"

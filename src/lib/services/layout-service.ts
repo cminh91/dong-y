@@ -41,9 +41,13 @@ export class LayoutService {
       // Parse post categories
       if (postCategoriesRes.ok) {
         const postData = await postCategoriesRes.json();
-        if (postData.success && postData.data) {
-          postCategories = postData.data;
+        console.log('Post categories API response:', postData);
+        if (postData.success && postData.data && postData.data.categories) {
+          postCategories = postData.data.categories;
+          console.log('Post categories loaded:', postCategories.length, 'categories');
         }
+      } else {
+        console.log('Post categories API failed:', postCategoriesRes.status);
       }
 
       // Parse contact info - API /api/admin/contact-sections trả về object trực tiếp

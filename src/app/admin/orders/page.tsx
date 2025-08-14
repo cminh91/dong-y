@@ -107,6 +107,57 @@ const OrdersPage: FC = () => {
     setCurrentPage(1); // Reset to first page when filtering
   };
 
+  // Handle export Excel
+  const handleExportExcel = async () => {
+    try {
+      // Build query parameters for export
+      const params = new URLSearchParams({
+        ...(filters.search && { search: filters.search }),
+        ...(filters.status && { status: filters.status }),
+        ...(filters.paymentStatus && { paymentStatus: filters.paymentStatus }),
+        ...(filters.startDate && { startDate: filters.startDate }),
+        ...(filters.endDate && { endDate: filters.endDate })
+      });
+
+      // Fetch Excel file
+      const response = await fetch(`/api/admin/orders/export?${params}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        alert('Lỗi: ' + errorData.error);
+        return;
+      }
+
+      // Get filename from response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'don-hang.xlsx';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      alert('Xuất file Excel thành công!');
+    } catch (error) {
+      console.error('Error exporting Excel:', error);
+      alert('Có lỗi xảy ra khi xuất file Excel');
+    }
+  };
+
   // Mock data for fallback (keeping original structure)
   const mockOrders = [
     {
@@ -172,7 +223,10 @@ const OrdersPage: FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 space-y-4 sm:space-y-0">
         <h1 className="text-2xl font-bold">Quản lý đơn hàng</h1>
         <div className="flex space-x-2">
-          <button className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm flex items-center">
+          <button
+            onClick={handleExportExcel}
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 text-sm flex items-center"
+          >
             <i className="fas fa-download mr-2"></i>Xuất Excel
           </button>
         </div>
