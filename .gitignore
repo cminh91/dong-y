@@ -31,6 +31,11 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # vercel
 .vercel
@@ -39,7 +44,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-.vercel
+# kilocode
+.kilocode/
 
 # uploads
 /uploads/*
@@ -47,5 +53,47 @@ next-env.d.ts
 /public/uploads/*
 !/public/uploads/.gitkeep
 
-# env files (can opt-in for committing if needed)
-.env
+# zip files
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# database
+*.db
+*.sqlite
+*.sqlite3
+
+# logs
+*.log
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Security
+*.key
+*.p12
+*.pfx
+*.pem
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Temporary files
+*.tmp
+*.temp
